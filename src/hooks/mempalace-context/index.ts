@@ -10,24 +10,11 @@ export function createMempalaceContextHook(directory: string) {
   const wing = basename(directory).toLowerCase().replace(/[^a-z0-9_-]/g, "-")
 
   const reminder = `<mempalace-context>
-## MemPalace Memory Protocol
-
 You have access to mempalace_* MCP tools for persistent memory across sessions.
 Current project wing: "${wing}"
-
-### On Session Start
-- Call mempalace_search with query relevant to the current task, filtered by wing="${wing}"
-- Check mempalace_kg_query for project entities if applicable
-
-### During Work — Save Durable Findings Only
-- Architecture decisions, bug root causes, non-obvious patterns
-- Use mempalace_add_drawer with wing="${wing}" and appropriate room (decisions, debugging, architecture, patterns)
-- Skip: ephemeral logs, temp fixes, obvious code
-
-### Do NOT Save
-- Secrets, credentials, API keys
-- Temporary debugging output
-- Content already in AGENTS.md or README.md
+On session start: search mempalace for relevant context (wing="${wing}").
+During work: save architecture decisions, bug root causes, non-obvious patterns via mempalace_add_drawer (wing="${wing}").
+Do NOT save: secrets, temp debugging output, content already in AGENTS.md.
 </mempalace-context>`
 
   return {
@@ -35,7 +22,12 @@ Current project wing: "${wing}"
       if (injectedSessions.has(input.sessionID)) return
       injectedSessions.add(input.sessionID)
 
-      output.parts.push({ type: "text", text: `\n${reminder}\n` })
+      const textPartIndex = output.parts.findIndex((p) => p.type === "text" && p.text !== undefined)
+      if (textPartIndex === -1) return
+
+      const originalText = output.parts[textPartIndex].text ?? ""
+      output.parts[textPartIndex].text = `${originalText}\n\n${reminder}`
+
       log("[mempalace-context] Injected memory protocol", { sessionID: input.sessionID, wing })
     },
   }
