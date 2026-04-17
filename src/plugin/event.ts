@@ -398,6 +398,9 @@ export function createEventHandler(args: {
 
     if (event.type === "session.deleted") {
       const sessionInfo = props?.info as { id?: string } | undefined;
+
+      await hooks.mempalaceContext?.event?.({ event: { type: event.type, properties: props } }).catch(() => {});
+
       if (sessionInfo?.id === getMainSessionID()) {
         setMainSession(undefined);
       }
