@@ -201,13 +201,13 @@ describe("createSisyphusJuniorAgentWithOverrides", () => {
       if (tools) {
         expect(tools.task).toBe(false)
         // call-omo-agent is NOW ALLOWED for subagents to spawn explore/librarian
-        expect(tools.call-omo-agent).toBe(true)
+        expect(tools["call-omo-agent"]).toBe(true)
         expect(tools.read).toBe(true)
       }
       if (permission) {
         expect(permission.task).toBe("deny")
         // call-omo-agent is NOW ALLOWED for subagents to spawn explore/librarian
-        expect(permission.call-omo-agent).toBe("allow")
+        expect(permission["call-omo-agent"]).toBe("allow")
       }
     })
 
@@ -229,11 +229,11 @@ describe("createSisyphusJuniorAgentWithOverrides", () => {
       const permission = result.permission as Record<string, string> | undefined
       if (tools) {
         expect(tools.task).toBe(false)
-        expect(tools.call-omo-agent).toBe(true)
+        expect(tools["call-omo-agent"]).toBe(true)
       }
       if (permission) {
         expect(permission.task).toBe("deny")
-        expect(permission.call-omo-agent).toBe("allow")
+        expect(permission["call-omo-agent"]).toBe("allow")
       }
     })
   })

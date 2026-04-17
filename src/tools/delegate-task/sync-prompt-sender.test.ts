@@ -92,7 +92,7 @@ bunDescribe("sendSyncPrompt", () => {
 
     //#then
     bunExpect(promptAsync).toHaveBeenCalled()
-    bunExpect(promptArgs.body.tools.call-omo-agent).toBe(false)
+    bunExpect(promptArgs.body.tools["call-omo-agent"]).toBe(false)
   })
 
   bunTest("applies agent tool restrictions for librarian agent", async () => {
@@ -132,7 +132,7 @@ bunDescribe("sendSyncPrompt", () => {
 
     //#then
     bunExpect(promptAsync).toHaveBeenCalled()
-    bunExpect(promptArgs.body.tools.call-omo-agent).toBe(false)
+    bunExpect(promptArgs.body.tools["call-omo-agent"]).toBe(false)
   })
 
   bunTest("does not restrict call-omo-agent for sisyphus agent", async () => {
@@ -172,7 +172,7 @@ bunDescribe("sendSyncPrompt", () => {
 
     //#then
     bunExpect(promptAsync).toHaveBeenCalled()
-    bunExpect(promptArgs.body.tools.call-omo-agent).toBe(true)
+    bunExpect(promptArgs.body.tools["call-omo-agent"]).toBe(true)
   })
 
   bunTest("includes agent alongside explicit category model", async () => {
