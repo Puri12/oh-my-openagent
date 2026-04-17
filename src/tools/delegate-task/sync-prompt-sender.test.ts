@@ -92,7 +92,7 @@ bunDescribe("sendSyncPrompt", () => {
 
     //#then
     bunExpect(promptAsync).toHaveBeenCalled()
-    bunExpect(promptArgs.body.tools.call_omo_agent).toBe(false)
+    bunExpect(promptArgs.body.tools.call-omo-agent).toBe(false)
   })
 
   bunTest("applies agent tool restrictions for librarian agent", async () => {
@@ -132,10 +132,10 @@ bunDescribe("sendSyncPrompt", () => {
 
     //#then
     bunExpect(promptAsync).toHaveBeenCalled()
-    bunExpect(promptArgs.body.tools.call_omo_agent).toBe(false)
+    bunExpect(promptArgs.body.tools.call-omo-agent).toBe(false)
   })
 
-  bunTest("does not restrict call_omo_agent for sisyphus agent", async () => {
+  bunTest("does not restrict call-omo-agent for sisyphus agent", async () => {
     //#given
     const { sendSyncPrompt } = require("./sync-prompt-sender")
 
@@ -172,7 +172,7 @@ bunDescribe("sendSyncPrompt", () => {
 
     //#then
     bunExpect(promptAsync).toHaveBeenCalled()
-    bunExpect(promptArgs.body.tools.call_omo_agent).toBe(true)
+    bunExpect(promptArgs.body.tools.call-omo-agent).toBe(true)
   })
 
   bunTest("includes agent alongside explicit category model", async () => {

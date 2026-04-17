@@ -7,7 +7,7 @@ import { getAgentFromSession } from "./agent-resolution"
 import { isPrometheusAgent } from "./agent-matcher"
 import { isAllowedFile } from "./path-policy"
 
-const TASK_TOOLS = ["task", "call_omo_agent"]
+const TASK_TOOLS = ["task", "call-omo-agent"]
 
 export function createPrometheusMdOnlyHook(ctx: PluginInput) {
   return {

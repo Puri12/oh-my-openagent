@@ -91,7 +91,7 @@ export async function executeSyncContinuation(
     const effectivePrompt = buildTaskPrompt(args.prompt, resumeAgent, tddEnabled)
     const tools = {
       task: allowTask,
-      call_omo_agent: true,
+      "call-omo-agent": true,
       question: false,
       ...(resumeAgent ? getAgentToolRestrictions(resumeAgent) : {}),
     }

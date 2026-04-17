@@ -541,7 +541,7 @@ export function createHephaestusAgent(
     color: "#D97706", // Forged Amber - Golden heated metal, divine craftsman
     permission: {
       question: "allow",
-      call_omo_agent: "deny",
+      "call-omo-agent": "deny",
     } as AgentConfig["permission"],
     reasoningEffort: "medium",
   };

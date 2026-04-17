@@ -41,7 +41,7 @@ function resolveModelAndFallbackChain(args: {
     const normalized = parseModelString(agentOverride.model)
     if (normalized) {
       model = agentOverride.variant ? { ...normalized, variant: agentOverride.variant } : normalized
-      log("[call_omo_agent] Resolved model override from agent config", {
+      log("[call-omo-agent] Resolved model override from agent config", {
         agent: subagentType,
         model: agentOverride.model,
         variant: agentOverride.variant,
@@ -52,7 +52,7 @@ function resolveModelAndFallbackChain(args: {
     if (normalized) {
       const variantToUse = agentOverride?.variant ?? agentCategoryVariant
       model = variantToUse ? { ...normalized, variant: variantToUse } : normalized
-      log("[call_omo_agent] Resolved model override from agent category", {
+      log("[call-omo-agent] Resolved model override from agent category", {
         agent: subagentType,
         category: agentOverride?.category,
         model: agentCategoryModel,
@@ -118,7 +118,7 @@ export function createCallOmoAgent(
     async execute(args: CallOmoAgentArgs, toolContext) {
       const toolCtx = toolContext as ToolContextWithMetadata;
       log(
-        `[call_omo_agent] Starting with agent: ${args.subagent_type}, background: ${args.run_in_background}`,
+        `[call-omo-agent] Starting with agent: ${args.subagent_type}, background: ${args.run_in_background}`,
       );
 
       const callableAgents = await resolveCallableAgents(ctx.client);

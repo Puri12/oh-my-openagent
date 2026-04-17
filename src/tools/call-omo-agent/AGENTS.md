@@ -4,11 +4,11 @@
 
 ## OVERVIEW
 
-23 files. The `call_omo_agent` tool — direct invocation of named agents (explore, librarian only). Distinct from `delegate-task`: no category system, no skill loading, no model selection. Fixed agent set, same execution modes (background/sync).
+23 files. The `call-omo-agent` tool — direct invocation of named agents (explore, librarian only). Distinct from `delegate-task`: no category system, no skill loading, no model selection. Fixed agent set, same execution modes (background/sync).
 
 ## DISTINCTION FROM delegate-task
 
-| Aspect | `call_omo_agent` | `delegate-task` (`task`) |
+| Aspect | `call-omo-agent` | `delegate-task` (`task`) |
 |--------|-----------------|--------------------------|
 | Agent selection | Named agent (explore/librarian) | Category or subagent_type |
 | Skill loading | None | `load_skills[]` supported |

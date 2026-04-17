@@ -27,7 +27,7 @@ export function createLibrarianAgent(model: string): AgentConfig {
     "edit",
     "apply_patch",
     "task",
-    "call_omo_agent",
+    "call-omo-agent",
   ])
 
   return {

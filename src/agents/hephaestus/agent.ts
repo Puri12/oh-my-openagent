@@ -125,7 +125,7 @@ export function createHephaestusAgent(
     color: "#D97706",
     permission: {
       question: "allow",
-      call_omo_agent: "deny",
+      "call-omo-agent": "deny",
       ...getGptApplyPatchPermission(model),
     } as AgentConfig["permission"],
     reasoningEffort: "medium",
