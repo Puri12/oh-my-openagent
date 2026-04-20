@@ -300,6 +300,9 @@ export function createSessionHooks(args: {
     anthropicEffort,
     runtimeFallback,
     legacyPluginToast,
-    mempalaceContext: createMempalaceContextHook(ctx.directory),
+    mempalaceContext: isHookEnabled("mempalace-context")
+      ? safeHook("mempalace-context", () =>
+          createMempalaceContextHook(ctx.directory, pluginConfig.mempalace))
+      : null,
   }
 }

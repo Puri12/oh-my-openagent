@@ -6063,6 +6063,18 @@
       ],
       "additionalProperties": false
     },
+    "mempalace": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "project_wing": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "_migrations": {
       "type": "array",
       "items": {
