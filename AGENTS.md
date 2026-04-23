@@ -114,6 +114,22 @@ Fields: agents (14 overridable, 21 fields each), categories (8 built-in + custom
 - **No path aliases**: no `@/` -- relative imports only
 - **Dual package**: `oh-my-opencode` + `oh-my-openagent` published simultaneously (transition period)
 
+## FILE TOOL PROTOCOL (Write vs Edit)
+
+The `write-existing-file-guard` hook enforces a strict contract for file modification tools:
+
+| Intent | Correct tool | Rule |
+|--------|--------------|------|
+| Create a NEW file | `Write` | Works immediately. No Read needed. |
+| Modify an EXISTING file (targeted change) | `Read` then `Edit` | Must Read first. Edit operates on `oldString` / `newString`. |
+| Replace an EXISTING file entirely | `Write` with `overwrite: true` | Bypasses the Read-before-Write contract. Use only when you truly want to discard current contents. |
+
+**If Write on an existing file fails with "File already exists. Use edit tool instead.", do NOT retry the same Write.** Switch strategy:
+1. Read the file to see real contents
+2. Use Edit for targeted changes, or retry Write with `overwrite: true` for a full replace
+
+This is enforced by `src/hooks/write-existing-file-guard/`. The guard's throw message itself carries the full recovery guidance (path + both options + do-not-retry directive), because opencode's `Plugin.trigger` does not invoke `tool.execute.after` when a pre-hook throws. `src/hooks/write-error-recovery/` exists as defense-in-depth for non-built-in Write tools that surface failures as tool output rather than throwing.
+
 ## ANTI-PATTERNS
 
 - Never use `as any`, `@ts-ignore`, `@ts-expect-error`

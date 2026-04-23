@@ -28,6 +28,7 @@ hooks/
 ├── directory-agents-injector/  # Auto-injects AGENTS.md
 ├── directory-readme-injector/  # Auto-injects README.md
 ├── edit-error-recovery/        # Recovers from failures
+├── write-error-recovery/       # Defense-in-depth reminder for Write-shaped failures that surface as tool output (not built-in Write throws)
 ├── hashline-edit-diff-enhancer/ # Enhanced diff output for hashline edits
 ├── hashline-read-enhancer/     # Adds LINE#ID hashes to Read output
 ├── interactive-bash-session/   # Tmux session management
@@ -76,6 +77,7 @@ hooks/
 | interactiveBashSession | tool.execute | Tmux session for interactive tools |
 | ralphLoop | event | Self-referential dev loop (boulder continuation) |
 | editErrorRecovery | tool.execute.after | Retry failed file edits |
+| writeErrorRecovery | tool.execute.after | Defense-in-depth reminder for non-built-in Write tools that surface failures as output (built-in Write is covered by write-existing-file-guard throw, not here) |
 | delegateTaskRetry | tool.execute.after | Retry failed task delegations |
 | startWork | chat.message | `/start-work` command handler |
 | prometheusMdOnly | tool.execute.before | Enforce .md-only writes for Prometheus |
