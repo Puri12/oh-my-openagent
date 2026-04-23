@@ -7,6 +7,7 @@ import {
   createKeywordDetectorHook,
   createThinkingBlockValidatorHook,
   createToolPairValidatorHook,
+  createMessagesImageResizerHook,
 } from "../../hooks"
 import {
   contextCollector,
@@ -20,6 +21,7 @@ export type TransformHooks = {
   contextInjectorMessagesTransform: ReturnType<typeof createContextInjectorMessagesTransformHook>
   thinkingBlockValidator: ReturnType<typeof createThinkingBlockValidatorHook> | null
   toolPairValidator: ReturnType<typeof createToolPairValidatorHook> | null
+  messagesImageResizer: ReturnType<typeof createMessagesImageResizerHook> | null
 }
 
 export function createTransformHooks(args: {
@@ -75,11 +77,20 @@ export function createTransformHooks(args: {
       )
     : null
 
+  const messagesImageResizer = isHookEnabled("messages-image-resizer")
+    ? safeCreateHook(
+        "messages-image-resizer",
+        () => createMessagesImageResizerHook(ctx),
+        { enabled: safeHookEnabled },
+      )
+    : null
+
   return {
     claudeCodeHooks,
     keywordDetector,
     contextInjectorMessagesTransform,
     thinkingBlockValidator,
     toolPairValidator,
+    messagesImageResizer,
   }
 }

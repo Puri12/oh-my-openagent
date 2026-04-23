@@ -52,6 +52,7 @@ export const HookNameSchema = z.enum([
   "anthropic-effort",
   "hashline-read-enhancer",
   "read-image-resizer",
+  "messages-image-resizer",
   "todo-description-override",
   "webfetch-redirect-guard",
   "legacy-plugin-toast",
