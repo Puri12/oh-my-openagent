@@ -99,6 +99,15 @@ export function createMessagesTransformHandler(args: {
 }): (input: Record<string, never>, output: MessagesTransformOutput) => Promise<void> {
   return async (input, output): Promise<void> => {
     await runMessagesTransformHookSafely(
+      "messagesImageResizer",
+      args.hooks.messagesImageResizer?.[
+        "experimental.chat.messages.transform"
+      ],
+      input,
+      output,
+    )
+
+    await runMessagesTransformHookSafely(
       "contextInjectorMessagesTransform",
       args.hooks.contextInjectorMessagesTransform?.[
         "experimental.chat.messages.transform"
