@@ -1,3 +1,5 @@
+/// <reference types="bun-types" />
+
 import { describe, it, expect, beforeEach } from "bun:test"
 import { createWriteErrorRecoveryHook, WRITE_ERROR_PATTERNS, WRITE_ERROR_REMINDER } from "./index"
 

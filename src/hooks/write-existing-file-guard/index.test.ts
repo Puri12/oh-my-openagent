@@ -1,3 +1,5 @@
+/// <reference types="bun-types" />
+
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -56,7 +58,7 @@ describe("createWriteExistingFileGuardHook", () => {
   }
 
   const emitSessionDeleted = async (sessionID: string): Promise<void> => {
-    await hook.event?.({ event: { type: "session.deleted", properties: { info: { id: sessionID } } } })
+    await hook.event?.({ event: { type: "session.deleted", properties: { info: { id: sessionID } } } } as never)
   }
 
   beforeEach(() => {
