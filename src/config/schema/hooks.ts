@@ -34,6 +34,7 @@ export const HookNameSchema = z.enum([
   "claude-code-hooks",
   "auto-slash-command",
   "edit-error-recovery",
+  "write-error-recovery",
   "json-error-recovery",
   "delegate-task-retry",
   "prometheus-md-only",

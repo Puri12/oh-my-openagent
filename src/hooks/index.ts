@@ -39,6 +39,7 @@ export { createNoSisyphusGptHook } from "./no-sisyphus-gpt";
 export { createNoHephaestusNonGptHook } from "./no-hephaestus-non-gpt";
 export { createAutoSlashCommandHook } from "./auto-slash-command";
 export { createEditErrorRecoveryHook } from "./edit-error-recovery";
+export { createWriteErrorRecoveryHook } from "./write-error-recovery";
 
 export { createPrometheusMdOnlyHook } from "./prometheus-md-only";
 export { createSisyphusJuniorNotepadHook } from "./sisyphus-junior-notepad";
