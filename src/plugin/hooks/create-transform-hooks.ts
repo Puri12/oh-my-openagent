@@ -5,6 +5,7 @@ import type { RalphLoopHook } from "../../hooks/ralph-loop"
 import {
   createClaudeCodeHooksHook,
   createKeywordDetectorHook,
+  createTeamMailboxInjector,
   createThinkingBlockValidatorHook,
   createToolPairValidatorHook,
   createMessagesImageResizerHook,
@@ -19,6 +20,7 @@ export type TransformHooks = {
   claudeCodeHooks: ReturnType<typeof createClaudeCodeHooksHook> | null
   keywordDetector: ReturnType<typeof createKeywordDetectorHook> | null
   contextInjectorMessagesTransform: ReturnType<typeof createContextInjectorMessagesTransformHook>
+  teamMailboxInjector: ReturnType<typeof createTeamMailboxInjector> | null
   thinkingBlockValidator: ReturnType<typeof createThinkingBlockValidatorHook> | null
   toolPairValidator: ReturnType<typeof createToolPairValidatorHook> | null
   messagesImageResizer: ReturnType<typeof createMessagesImageResizerHook> | null
@@ -61,6 +63,16 @@ export function createTransformHooks(args: {
   const contextInjectorMessagesTransform =
     createContextInjectorMessagesTransformHook(contextCollector)
 
+  const teamModeConfig = pluginConfig.team_mode
+
+  const teamMailboxInjector = teamModeConfig?.enabled
+    ? safeCreateHook(
+        "team-mailbox-injector",
+        () => createTeamMailboxInjector(ctx, teamModeConfig),
+        { enabled: safeHookEnabled },
+      )
+    : null
+
   const thinkingBlockValidator = isHookEnabled("thinking-block-validator")
     ? safeCreateHook(
         "thinking-block-validator",
@@ -89,6 +101,7 @@ export function createTransformHooks(args: {
     claudeCodeHooks,
     keywordDetector,
     contextInjectorMessagesTransform,
+    teamMailboxInjector,
     thinkingBlockValidator,
     toolPairValidator,
     messagesImageResizer,
