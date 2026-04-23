@@ -16,7 +16,22 @@ export type GuardArgs = {
 
 const MAX_TRACKED_SESSIONS = 256
 export const MAX_TRACKED_PATHS_PER_SESSION = 1024
-const BLOCK_MESSAGE = "File already exists. Use edit tool instead."
+
+export const BLOCK_MESSAGE_PREFIX = "File already exists. Use edit tool instead."
+
+export function buildBlockMessage(filePath: string): string {
+  return [
+    `${BLOCK_MESSAGE_PREFIX}`,
+    ``,
+    `Target: ${filePath}`,
+    ``,
+    `DO NOT retry the same Write call. It will fail again. Switch strategy:`,
+    `  1. READ then EDIT (recommended for targeted changes): call the Read tool on this path first, then use Edit to change specific lines.`,
+    `  2. FULL REPLACE: retry Write with "overwrite": true if you truly intend to replace the entire file contents.`,
+    ``,
+    `Write is intended for creating NEW files. This guard enforces the read-before-overwrite safety contract so you do not silently destroy user changes.`,
+  ].join("\n")
+}
 
 export function asRecord(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {

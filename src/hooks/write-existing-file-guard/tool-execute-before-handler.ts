@@ -4,6 +4,7 @@ import { log } from "../../shared"
 import { MAX_TRACKED_PATHS_PER_SESSION } from "./hook"
 import {
   asRecord,
+  buildBlockMessage,
   getPathFromArgs,
   isOverwriteEnabled,
   isPathInsideDirectory,
@@ -173,5 +174,5 @@ export async function handleWriteExistingFileGuardToolExecuteBefore(params: {
     resolvedPath,
   })
 
-  throw new Error("File already exists. Use edit tool instead.")
+  throw new Error(buildBlockMessage(resolvedPath))
 }

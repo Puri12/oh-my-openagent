@@ -3,10 +3,10 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync 
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
-import { MAX_TRACKED_PATHS_PER_SESSION } from "./hook"
+import { BLOCK_MESSAGE_PREFIX, buildBlockMessage, MAX_TRACKED_PATHS_PER_SESSION } from "./hook"
 import { createWriteExistingFileGuardHook } from "./index"
 
-const BLOCK_MESSAGE = "File already exists. Use edit tool instead."
+const BLOCK_MESSAGE = BLOCK_MESSAGE_PREFIX
 
 type Hook = ReturnType<typeof createWriteExistingFileGuardHook>
 
@@ -546,5 +546,53 @@ describe("createWriteExistingFileGuardHook", () => {
         outputArgs: { filePath: existingFile, content: "second write after delete" },
       })
     ).rejects.toThrow(BLOCK_MESSAGE)
+  })
+})
+
+describe("buildBlockMessage", () => {
+  test("#given file path #when message is built #then contains prefix, path, and both recovery options", () => {
+    const filePath = "/tmp/example/target.txt"
+    const message = buildBlockMessage(filePath)
+
+    expect(message).toContain(BLOCK_MESSAGE_PREFIX)
+    expect(message).toContain(filePath)
+    expect(message).toContain("READ then EDIT")
+    expect(message).toContain("Read tool")
+    expect(message).toContain("Edit")
+    expect(message).toContain("FULL REPLACE")
+    expect(message).toContain(`"overwrite": true`)
+    expect(message).toContain("read-before-overwrite")
+  })
+
+  test("#given guard throws #when error is caught #then error.message contains path and both options", async () => {
+    const { createWriteExistingFileGuardHook: createHook } = await import("./index")
+    const { mkdtempSync, writeFileSync, rmSync } = await import("node:fs")
+    const { tmpdir } = await import("node:os")
+    const { join } = await import("node:path")
+
+    const tempDir = mkdtempSync(join(tmpdir(), "build-block-msg-"))
+    const existingFile = join(tempDir, "existing.txt")
+    writeFileSync(existingFile, "original")
+
+    const hook = createHook({ directory: tempDir } as never)
+    let caught: Error | undefined
+    try {
+      await hook["tool.execute.before"]?.(
+        { tool: "write", sessionID: "ses_bm", callID: "call_bm" } as never,
+        { args: { filePath: existingFile, content: "new" } } as never,
+      )
+    } catch (error) {
+      caught = error as Error
+    }
+
+    try {
+      expect(caught).toBeDefined()
+      expect(caught?.message).toContain(BLOCK_MESSAGE_PREFIX)
+      expect(caught?.message).toContain(existingFile)
+      expect(caught?.message).toContain("READ then EDIT")
+      expect(caught?.message).toContain(`"overwrite": true`)
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true })
+    }
   })
 })
