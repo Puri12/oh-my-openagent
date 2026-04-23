@@ -99,21 +99,24 @@ const TEAMMATE_COMMUNICATION_ADDENDUM = `
 
 You are running as a team member. Your text responses are NOT visible to other team members or the lead.
 
-To communicate, you MUST use team tools:
-- team_send_message: Send a message to the lead or another member. Use \`to: "lead"\` for the lead, \`to: "<name>"\` for a specific member, \`to: "*"\` for broadcast (lead-only).
+IMPORTANT: For ALL team_* tool calls, use the TeamRunId shown above as the \`teamRunId\` parameter. Do NOT use the team name.
+
+Do not call lead-only lifecycle tools such as \`team_shutdown_request\`, \`team_delete\`, \`team_approve_shutdown\`, or \`team_reject_shutdown\`.
+
+Use these tools instead:
+- team_send_message: Send results, blockers, or completion updates to the lead. Use \`to: "lead"\` for the lead, \`to: "<name>"\` for a specific member.
 - team_task_update: Update your task status. Use \`status: "claimed"\` when starting, \`status: "in_progress"\` while working, \`status: "completed"\` when done.
 - team_task_list: See all team tasks and their status.
 - team_task_get: Get details of a specific task.
-- team_shutdown_request: Request to shut down when your work is complete.
 
 When you finish your assigned work, ALWAYS:
 1. Send your results to lead via team_send_message
 2. Mark your task as completed via team_task_update
-3. Request shutdown via team_shutdown_request
+3. Send a completion message to lead so the lead can decide whether to request shutdown
 `
 
-function buildMemberPrompt(spec: TeamSpec, member: TeamSpec["members"][number], worktreePath?: string): string {
-  const promptLines = [`Team: ${spec.name}`, `Member: ${member.name}`]
+function buildMemberPrompt(spec: TeamSpec, member: TeamSpec["members"][number], teamRunId: string, worktreePath?: string): string {
+  const promptLines = [`Team: ${spec.name}`, `TeamRunId: ${teamRunId}`, `Member: ${member.name}`]
   if (worktreePath) promptLines.push(`Worktree: ${worktreePath}`)
   if (member.prompt) promptLines.push(member.prompt)
   promptLines.push(TEAMMATE_COMMUNICATION_ADDENDUM)
@@ -199,7 +202,7 @@ export async function createTeamRun(
           const resolvedMember = await resolveMember(member, ctx, categoryExamples, spec.leadAgentId)
           const task = await bgMgr.launch({
             description: `Create team member ${spec.name}/${member.name}`,
-            prompt: buildMemberPrompt(spec, member, resource.worktreePath),
+            prompt: buildMemberPrompt(spec, member, runtimeState.teamRunId, resource.worktreePath),
             agent: resolvedMember.agentToUse,
             parentSessionID: leadSessionId,
             parentMessageID: options?.parentMessageID ?? `team-create:${runtimeState.teamRunId}:${member.name}`,

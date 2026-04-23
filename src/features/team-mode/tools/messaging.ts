@@ -4,8 +4,8 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool"
 
 import type { TeamModeConfig } from "../../../config/schema/team-mode"
 import { log } from "../../../shared/logger"
-import type { OpencodeClient } from "../../../tools/delegate-task/types"
-import { listActiveTeams, loadRuntimeState } from "../team-state-store/store"
+import { lookupTeamSession } from "../team-session-registry"
+import { loadRuntimeState } from "../team-state-store/store"
 import { buildEnvelope } from "../team-mailbox/poll"
 import {
   commitDeliveryReservation,
@@ -19,6 +19,20 @@ import { MessageSchema } from "../types"
 
 const MESSAGE_TOOL_KINDS = ["message", "announcement"] as const
 
+export type LiveDeliveryClient = {
+  session: {
+    promptAsync(input: {
+      path: { id: string }
+      body: {
+        parts: Array<{ type: "text"; text: string }>
+        agent?: string
+        model?: { providerID: string; modelID: string }
+        variant?: string
+      }
+    }): Promise<unknown>
+  }
+}
+
 type TeamRuntimeDetails = {
   teamRunId: string
   isLead: boolean
@@ -27,12 +41,22 @@ type TeamRuntimeDetails = {
 }
 
 async function resolveTeamRuntimeDetails(teamRunId: string, sessionID: string, config: TeamModeConfig): Promise<TeamRuntimeDetails> {
-  const activeTeams = await listActiveTeams(config)
+  const registryEntry = lookupTeamSession(sessionID)
+  if (registryEntry?.teamRunId === teamRunId) {
+    const runtimeState = await loadRuntimeState(teamRunId, config)
 
-  for (const team of activeTeams) {
-    if (team.teamRunId !== teamRunId) continue
+    return {
+      teamRunId: runtimeState.teamRunId,
+      isLead: registryEntry.role === "lead",
+      senderName: registryEntry.memberName,
+      activeMembers: runtimeState.members
+        .map((entry) => entry.name)
+        .filter((name) => name !== registryEntry.memberName),
+    }
+  }
 
-    const runtimeState = await loadRuntimeState(team.teamRunId, config)
+  try {
+    const runtimeState = await loadRuntimeState(teamRunId, config)
     const isLead = runtimeState.leadSessionId === sessionID
     const leadMember = isLead
       ? runtimeState.members.find((member) => member.agentType === "leader")
@@ -48,18 +72,18 @@ async function resolveTeamRuntimeDetails(teamRunId: string, sessionID: string, c
         .map((entry) => entry.name)
         .filter((name) => name !== senderName),
     }
-  }
-
-  return {
-    teamRunId,
-    isLead: false,
-    senderName: "unknown",
-    activeMembers: [],
+  } catch {
+    return {
+      teamRunId,
+      isLead: false,
+      senderName: "unknown",
+      activeMembers: [],
+    }
   }
 }
 
 async function deliverLive(
-  client: OpencodeClient,
+  client: LiveDeliveryClient,
   message: Message,
   teamRunId: string,
   deliveredTo: readonly string[],
@@ -69,14 +93,32 @@ async function deliverLive(
   const envelope = buildEnvelope(message)
 
   for (const recipientName of deliveredTo) {
-    const recipientMember = runtimeState.members.find((entry) => entry.name === recipientName)
-    const recipientSessionId = recipientMember?.sessionId
-    if (!recipientSessionId) continue
-
     // Reserve the inbox file before delivering so the transform-hook fallback
     // cannot re-read the same message while promptAsync is in flight.
     const reservation = await reserveMessageForDelivery(teamRunId, recipientName, message.messageId, config)
     if (reservation === null) continue
+
+    const recipientMember = runtimeState.members.find((entry) => entry.name === recipientName)
+    const recipientSessionId = recipientMember?.sessionId
+    if (!recipientSessionId) {
+      log("[team-mailbox] live delivery unavailable, falling back to inbox injection", {
+        reason: "missing-session-id",
+        teamRunId,
+        recipient: recipientName,
+        messageId: message.messageId,
+      })
+      try {
+        await releaseDeliveryReservation(reservation)
+      } catch (releaseError) {
+        log("[team-mailbox] failed to release delivery reservation", {
+          error: releaseError instanceof Error ? releaseError.message : String(releaseError),
+          teamRunId,
+          recipient: recipientName,
+          messageId: message.messageId,
+        })
+      }
+      continue
+    }
 
     const recipientAgent = recipientMember?.subagent_type
     const recipientModel = recipientMember?.model
@@ -95,8 +137,14 @@ async function deliverLive(
         },
       })
       await commitDeliveryReservation(reservation)
+      log("[team-mailbox] live delivery committed", {
+        teamRunId,
+        recipient: recipientName,
+        recipientSessionId,
+        messageId: message.messageId,
+      })
     } catch (error) {
-      log("[team-mailbox] live delivery failed, restoring inbox entry", {
+      log("[team-mailbox] live delivery failed, falling back to inbox injection", {
         error: error instanceof Error ? error.message : String(error),
         teamRunId,
         recipient: recipientName,
@@ -116,7 +164,7 @@ async function deliverLive(
   }
 }
 
-export function createTeamSendMessageTool(config: TeamModeConfig, client: OpencodeClient): ToolDefinition {
+export function createTeamSendMessageTool(config: TeamModeConfig, client: LiveDeliveryClient): ToolDefinition {
   return tool({
     description: "Send a message to a team member or broadcast to the team.",
     args: {
@@ -171,7 +219,15 @@ export function createTeamSendMessageTool(config: TeamModeConfig, client: Openco
         reservedRecipients,
       })
 
-      await deliverLive(client, message, teamRuntime.teamRunId, result.deliveredTo, config)
+      try {
+        await deliverLive(client, message, teamRuntime.teamRunId, result.deliveredTo, config)
+      } catch (liveError) {
+        log("[team-mailbox] deliverLive top-level error (message already in inbox, safe to ignore)", {
+          error: liveError instanceof Error ? liveError.message : String(liveError),
+          teamRunId: teamRuntime.teamRunId,
+          messageId: message.messageId,
+        })
+      }
 
       return JSON.stringify(result)
     },
