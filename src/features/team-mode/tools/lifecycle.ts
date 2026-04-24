@@ -16,6 +16,7 @@ import { listActiveTeams, loadRuntimeState } from "../team-state-store/store"
 import { TeamSpecSchema, type RuntimeState, type TeamSpec } from "../types"
 
 const ACTIVE_RUNTIME_STATUSES = new Set<RuntimeState["status"]>(["creating", "active", "shutdown_requested"])
+const TEAM_CREATE_USAGE = "team_create requires exactly one of teamName or inline_spec. Use team_create({ teamName: \"existing-team\" }) or team_create({ inline_spec: { name: \"team-name\", members: [{ name: \"worker\", category: \"quick\", prompt: \"Do the assigned work.\" }] } })."
 
 const TeamCreateArgsSchema = z.object({
   teamName: z.string().min(1).optional(),
@@ -44,6 +45,8 @@ type TeamLifecycleToolContext = ToolContext & {
 
 type TeamParticipant = { role: "lead" | "member"; memberName: string }
 
+type TeamCreateArgs = z.infer<typeof TeamCreateArgsSchema>
+
 function getLeadMemberName(runtimeState: RuntimeState): string {
   const leadMember = runtimeState.members.find((member) => member.agentType === "leader")
   if (!leadMember) throw new Error(`team '${runtimeState.teamRunId}' is missing a lead member`)
@@ -57,6 +60,15 @@ function sanitizeRuntimeState(runtimeState: RuntimeState): Omit<RuntimeState, "m
     ...runtimeState,
     members: runtimeState.members.map(({ lastInjectedTurnMarker: _turnMarker, pendingInjectedMessageIds: _pendingIds, ...member }) => member),
   }
+}
+
+function parseTeamCreateArgs(rawArgs: unknown): TeamCreateArgs {
+  const result = TeamCreateArgsSchema.safeParse(rawArgs)
+  if (!result.success) {
+    throw new Error(TEAM_CREATE_USAGE)
+  }
+
+  return result.data
 }
 
 function parseInlineTeamSpec(
@@ -73,7 +85,12 @@ function parseInlineTeamSpec(
     }
   }
 
-  const parsedSpec = TeamSpecSchema.parse(normalizeTeamSpecInput(specObject, options))
+  const parsedSpecResult = TeamSpecSchema.safeParse(normalizeTeamSpecInput(specObject, options))
+  if (!parsedSpecResult.success) {
+    throw new Error(`Invalid inline_spec for team_create. Provide an object with name and members array. Example: team_create({ inline_spec: { name: "project-analysis-team", members: [{ name: "structure-analyst", category: "quick", prompt: "Analyze project structure." }] } }).`)
+  }
+
+  const parsedSpec = parsedSpecResult.data
   validateSpec(parsedSpec)
   return parsedSpec
 }
@@ -117,7 +134,7 @@ export function createTeamCreateTool(
       leadSessionId: tool.schema.string().optional().describe("Optional non-empty session ID override. Usually omit this and let team_create use the current session."),
     },
     async execute(rawArgs, toolContext) {
-      const args = TeamCreateArgsSchema.parse(rawArgs)
+      const args = parseTeamCreateArgs(rawArgs)
       const runtimeContext = toolContext as TeamLifecycleToolContext
       const leadSessionId = args.leadSessionId ?? runtimeContext.sessionID
       if (!leadSessionId) throw new Error("team_create requires leadSessionId or tool context sessionID")

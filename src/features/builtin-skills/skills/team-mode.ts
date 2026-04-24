@@ -86,7 +86,7 @@ Do not use \`oracle\`, \`prometheus\`, or other non-eligible agents here. For th
 
 ## Lifecycle
 
-1. Lead creates the team with \`team_create\`.
+1. Lead creates the team with \`team_create({ teamName: "existing-team" })\` or \`team_create({ inline_spec: { name: "team-name", members: [...] } })\`. Never call \`team_create\` with empty arguments.
 2. Lead assigns work with \`team_send_message\` or \`team_task_create\`.
 3. Members report progress with \`team_send_message\` plus \`team_task_update\`.
 4. Lead and members track progress with \`team_task_list\`, \`team_task_get\`, and \`team_status\`.

@@ -193,4 +193,32 @@ describe("createTeamCreateTool inline_spec normalization", () => {
       ],
     })
   })
+
+  test("explains how to call team_create when arguments are empty", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never)
+
+    // when
+    const result = teamCreateTool.execute({}, createToolContext("lead-session", "Sisyphus"))
+
+    // then
+    await expect(result).rejects.toThrow("team_create requires exactly one of teamName or inline_spec")
+    await expect(result).rejects.toThrow("team_create({ inline_spec: { name:")
+  })
+
+  test("explains how to shape inline_spec when members are missing", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never)
+
+    // when
+    const result = teamCreateTool.execute({ inline_spec: { name: "project-analysis-team" } }, createToolContext("lead-session", "Sisyphus"))
+
+    // then
+    await expect(result).rejects.toThrow("Invalid inline_spec for team_create")
+    await expect(result).rejects.toThrow("members array")
+  })
 })
