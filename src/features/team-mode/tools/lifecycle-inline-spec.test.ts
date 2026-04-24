@@ -20,11 +20,11 @@ function clone<TValue>(value: TValue): TValue {
   return structuredClone(value)
 }
 
-function createToolContext(sessionID: string): ToolContext {
+function createToolContext(sessionID: string, agent = "test-agent"): ToolContext {
   return {
     sessionID,
     messageID: randomUUID(),
-    agent: "test-agent",
+    agent,
     directory: "/project",
     worktree: "/project",
     abort: new AbortController().signal,
@@ -146,5 +146,51 @@ describe("createTeamCreateTool inline_spec normalization", () => {
     // then
     expect(result.runtimeState.members.map((member: { name: string }) => member.name)).toEqual(["lead", "quick-1", "deep-1", "deep-2"])
     expect(result.runtimeState.teamName).toBe("ccapi-explorers-v2")
+  })
+
+  test("accepts category members written with natural inline prompt fields", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never)
+    const inlineSpec = {
+      name: "project-analysis-team",
+      description: "Analyze the codebase from structure, core logic, and quality angles.",
+      members: [
+        {
+          name: "structure-analyst",
+          category: "quick",
+          loadSkills: [],
+          systemPrompt: "Focus on directory layouts, module boundaries, and architectural organization.",
+        },
+        {
+          name: "core-logic-analyst",
+          category: "quick",
+          loadSkills: [],
+          systemPrompt: "Focus on initialization flows, plugin architecture, hooks, tools, and MCP integration.",
+        },
+        {
+          name: "quality-analyst",
+          category: "quick",
+          loadSkills: [],
+          systemPrompt: "Focus on tests, CI/CD, build scripts, conventions, and anti-pattern enforcement.",
+        },
+      ],
+    }
+
+    // when
+    await teamCreateTool.execute({ inline_spec: inlineSpec }, createToolContext("lead-session", "Sisyphus"))
+    const firstCall = createTeamRunMock.mock.calls[0]
+
+    // then
+    expect(firstCall?.[0]).toMatchObject({
+      leadAgentId: "lead",
+      members: [
+        { name: "lead", kind: "subagent_type" },
+        { name: "structure-analyst", kind: "category", category: "quick", prompt: "Focus on directory layouts, module boundaries, and architectural organization." },
+        { name: "core-logic-analyst", kind: "category", category: "quick", prompt: "Focus on initialization flows, plugin architecture, hooks, tools, and MCP integration." },
+        { name: "quality-analyst", kind: "category", category: "quick", prompt: "Focus on tests, CI/CD, build scripts, conventions, and anti-pattern enforcement." },
+      ],
+    })
   })
 })

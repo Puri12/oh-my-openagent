@@ -18,7 +18,9 @@ Team mode gives Claude Code Agent Teams parity. It is off by default. Enable it 
 
 Create a team at \`~/.omo/teams/{name}/config.json\`.
 
-This TeamSpec uses a lead plus members list.
+You can also pass the same object directly to \`team_create({ inline_spec: ... })\`.
+
+This TeamSpec uses a lead plus members list. Every canonical member has a \`kind\` discriminator.
 
 Example:
 
@@ -38,6 +40,28 @@ Example:
     {
       "kind": "subagent_type",
       "subagent_type": "atlas"
+    }
+  ]
+}
+\`\`\`
+
+Inline shorthand is accepted for category members. If \`kind\` is omitted, \`category\` implies \`kind: "category"\`. \`systemPrompt\` is accepted as a \`prompt\` alias, and \`loadSkills\` is ignored because team members receive their behavior through \`prompt\`.
+
+Example:
+
+\`\`\`json
+{
+  "name": "project-analysis-team",
+  "members": [
+    {
+      "name": "structure-analyst",
+      "category": "quick",
+      "systemPrompt": "Analyze directory layouts, module boundaries, and architectural organization."
+    },
+    {
+      "name": "quality-analyst",
+      "category": "quick",
+      "systemPrompt": "Analyze tests, CI/CD, build scripts, conventions, and anti-patterns."
     }
   ]
 }

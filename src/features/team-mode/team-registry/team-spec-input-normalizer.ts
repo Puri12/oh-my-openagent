@@ -85,6 +85,43 @@ function createCallerLeadMember(callerAgentTypeId: string): JsonRecord {
   }
 }
 
+function getPromptAlias(member: JsonRecord): string | undefined {
+  if (typeof member.prompt === "string") {
+    return member.prompt
+  }
+
+  if (typeof member.systemPrompt === "string") {
+    return member.systemPrompt
+  }
+
+  if (typeof member.system_prompt === "string") {
+    return member.system_prompt
+  }
+
+  return undefined
+}
+
+function normalizeInlineMember(member: JsonRecord): JsonRecord {
+  const { loadSkills: _loadSkills, load_skills: _loadSkillsSnakeCase, systemPrompt: _systemPrompt, system_prompt: _systemPromptSnakeCase, ...normalizedMember } = member
+
+  if (normalizedMember.kind === undefined) {
+    if (typeof normalizedMember.category === "string") {
+      normalizedMember.kind = "category"
+    } else if (typeof normalizedMember.subagent_type === "string") {
+      normalizedMember.kind = "subagent_type"
+    }
+  }
+
+  if (normalizedMember.kind === "category" && normalizedMember.prompt === undefined) {
+    const prompt = getPromptAlias(member)
+    if (prompt !== undefined) {
+      normalizedMember.prompt = prompt
+    }
+  }
+
+  return normalizedMember
+}
+
 export function normalizeTeamSpecInput(raw: unknown, options?: NormalizeTeamSpecInputOptions): unknown {
   if (!isJsonRecord(raw)) {
     return raw
@@ -99,10 +136,10 @@ export function normalizeTeamSpecInput(raw: unknown, options?: NormalizeTeamSpec
     || (Array.isArray(rawMembers) && hasMemberLeadFlag(rawMembers))
 
   if (Array.isArray(rawMembers)) {
-    let normalizedMembers = rawMembers.map((member) => isJsonRecord(member) ? cloneJsonRecord(member) : member)
+    let normalizedMembers = rawMembers.map((member) => isJsonRecord(member) ? normalizeInlineMember(member) : member)
 
     if (isJsonRecord(rawLead)) {
-      const leadMember = cloneJsonRecord(rawLead)
+      const leadMember = normalizeInlineMember(rawLead)
       if (leadMember.name === undefined) {
         leadMember.name = "lead"
       }
