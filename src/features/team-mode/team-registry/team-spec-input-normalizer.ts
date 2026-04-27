@@ -4,6 +4,7 @@ type JsonRecord = Record<string, unknown>
 
 export type NormalizeTeamSpecInputOptions = {
   callerTeamLead?: CallerTeamLead
+  defaultCategoryName?: string
 }
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -18,7 +19,7 @@ function getMemberName(value: unknown): string | undefined {
   return isJsonRecord(value) && typeof value.name === "string" ? value.name : undefined
 }
 
-function normalizeMemberNameStem(value: string): string {
+function normalizeNameStem(value: string): string {
   const normalizedStem = value
     .trim()
     .toLowerCase()
@@ -30,33 +31,31 @@ function normalizeMemberNameStem(value: string): string {
 
 function deriveMemberNameStem(member: JsonRecord): string {
   if (member.kind === "category" && typeof member.category === "string") {
-    return normalizeMemberNameStem(member.category)
+    return normalizeNameStem(member.category)
   }
 
   if (member.kind === "subagent_type" && typeof member.subagent_type === "string") {
-    return normalizeMemberNameStem(member.subagent_type)
+    return normalizeNameStem(member.subagent_type)
   }
 
   return "member"
 }
 
 function assignGeneratedMemberNames(rawMembers: unknown[]): unknown[] {
-  const usedNames = new Set(rawMembers.flatMap((member) => {
-    const memberName = getMemberName(member)
-    return memberName === undefined ? [] : [memberName]
-  }))
+  const usedNames = new Set<string>()
 
   return rawMembers.map((member) => {
-    if (!isJsonRecord(member) || getMemberName(member) !== undefined) {
+    if (!isJsonRecord(member)) {
       return member
     }
 
-    const stem = deriveMemberNameStem(member)
-    let suffix = 1
-    let generatedName = `${stem}-${suffix}`
+    const rawName = getMemberName(member)
+    const stem = rawName === undefined ? deriveMemberNameStem(member) : normalizeNameStem(rawName)
+    let generatedName = rawName === undefined ? `${stem}-1` : stem
+    let suffix = rawName === undefined ? 1 : 2
     while (usedNames.has(generatedName)) {
-      suffix += 1
       generatedName = `${stem}-${suffix}`
+      suffix += 1
     }
 
     usedNames.add(generatedName)
@@ -101,22 +100,73 @@ function getPromptAlias(member: JsonRecord): string | undefined {
   return undefined
 }
 
-function normalizeInlineMember(member: JsonRecord): JsonRecord {
-  const { loadSkills: _loadSkills, load_skills: _loadSkillsSnakeCase, systemPrompt: _systemPrompt, system_prompt: _systemPromptSnakeCase, ...normalizedMember } = member
+function formatStringArray(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const strings = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+  return strings.length > 0 ? strings.join(", ") : undefined
+}
+
+function buildPromptFromNaturalMember(member: JsonRecord): string {
+  const promptAlias = getPromptAlias(member)
+  if (promptAlias !== undefined) {
+    return promptAlias
+  }
+
+  const promptParts = [
+    typeof member.role === "string" ? `Role: ${member.role}` : undefined,
+    typeof member.description === "string" ? member.description : undefined,
+    formatStringArray(member.capabilities),
+    formatStringArray(member.responsibilities),
+  ].filter((part): part is string => part !== undefined && part.trim().length > 0)
+
+  return promptParts.length > 0
+    ? promptParts.join("\n")
+    : "Work on the assigned team task and report findings to the lead."
+}
+
+function normalizeInlineMember(member: JsonRecord, options?: NormalizeTeamSpecInputOptions): JsonRecord {
+  const {
+    capabilities: _capabilities,
+    description: _description,
+    loadSkills: _loadSkills,
+    load_skills: _loadSkillsSnakeCase,
+    responsibilities: _responsibilities,
+    role: _role,
+    systemPrompt: _systemPrompt,
+    system_prompt: _systemPromptSnakeCase,
+    ...normalizedMember
+  } = member
+
+  const rawKind = normalizedMember.kind
 
   if (normalizedMember.kind === undefined) {
     if (typeof normalizedMember.category === "string") {
       normalizedMember.kind = "category"
     } else if (typeof normalizedMember.subagent_type === "string") {
       normalizedMember.kind = "subagent_type"
+    } else if (options?.defaultCategoryName !== undefined) {
+      normalizedMember.kind = "category"
+      normalizedMember.category = options.defaultCategoryName
+    }
+  } else if (normalizedMember.kind !== "category" && normalizedMember.kind !== "subagent_type") {
+    if (typeof normalizedMember.category === "string") {
+      normalizedMember.kind = "category"
+    } else if (typeof normalizedMember.subagent_type === "string") {
+      normalizedMember.kind = "subagent_type"
+    } else if (typeof rawKind === "string" && rawKind !== "agent" && rawKind !== "member" && rawKind !== "worker" && rawKind !== "analyst") {
+      normalizedMember.kind = "category"
+      normalizedMember.category = rawKind
+    } else if (options?.defaultCategoryName !== undefined) {
+      normalizedMember.kind = "category"
+      normalizedMember.category = options.defaultCategoryName
     }
   }
 
   if (normalizedMember.kind === "category" && normalizedMember.prompt === undefined) {
-    const prompt = getPromptAlias(member)
-    if (prompt !== undefined) {
-      normalizedMember.prompt = prompt
-    }
+    normalizedMember.prompt = buildPromptFromNaturalMember(member)
   }
 
   return normalizedMember
@@ -128,6 +178,10 @@ export function normalizeTeamSpecInput(raw: unknown, options?: NormalizeTeamSpec
   }
 
   const normalizedSpec = cloneJsonRecord(raw)
+  if (typeof normalizedSpec.name === "string") {
+    normalizedSpec.name = normalizeNameStem(normalizedSpec.name)
+  }
+
   const rawMembers = raw.members
   const rawLead = raw.lead
   let leadAgentId = typeof raw.leadAgentId === "string" ? raw.leadAgentId : undefined
@@ -136,10 +190,10 @@ export function normalizeTeamSpecInput(raw: unknown, options?: NormalizeTeamSpec
     || (Array.isArray(rawMembers) && hasMemberLeadFlag(rawMembers))
 
   if (Array.isArray(rawMembers)) {
-    let normalizedMembers = rawMembers.map((member) => isJsonRecord(member) ? normalizeInlineMember(member) : member)
+    let normalizedMembers = rawMembers.map((member) => isJsonRecord(member) ? normalizeInlineMember(member, options) : member)
 
     if (isJsonRecord(rawLead)) {
-      const leadMember = normalizeInlineMember(rawLead)
+      const leadMember = normalizeInlineMember(rawLead, options)
       if (leadMember.name === undefined) {
         leadMember.name = "lead"
       }
@@ -175,6 +229,13 @@ export function normalizeTeamSpecInput(raw: unknown, options?: NormalizeTeamSpec
       }
       return stripMemberLeadFlag(member)
     })
+
+    if (leadAgentId !== undefined && !normalizedMembers.some((member) => getMemberName(member) === leadAgentId)) {
+      const normalizedLeadAgentId = normalizeNameStem(leadAgentId)
+      if (normalizedMembers.some((member) => getMemberName(member) === normalizedLeadAgentId)) {
+        leadAgentId = normalizedLeadAgentId
+      }
+    }
 
     if (leadAgentId === undefined && normalizedMembers.length === 1) {
       leadAgentId = getMemberName(normalizedMembers[0])
