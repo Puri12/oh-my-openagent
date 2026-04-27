@@ -29,9 +29,18 @@ function isTerminalTmuxError(stderr: string): boolean {
 	return TERMINAL_TMUX_ERROR_PATTERN.test(stderr)
 }
 
+function resolveTmuxExecutable(tmuxPath: string): string[] {
+	const inCmux = Boolean(process.env.CMUX_SOCKET_PATH) ||
+		process.env.TMUX?.includes("cmuxterm") === true
+	if (inCmux) {
+		return ["cmux", "__tmux-compat"]
+	}
+	return [tmuxPath]
+}
+
 async function runTmuxCommandOnce(tmuxPath: string, args: Array<string>, timeoutMs?: number): Promise<TmuxCommandResult> {
 	const abortController = new AbortController()
-	const subprocess = spawn([tmuxPath, ...args], {
+	const subprocess = spawn([...resolveTmuxExecutable(tmuxPath), ...args], {
 		stdout: "pipe",
 		stderr: "pipe",
 		signal: abortController.signal,

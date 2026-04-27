@@ -1,6 +1,6 @@
 /// <reference types="bun-types" />
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { access, mkdtemp, readdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -90,7 +90,7 @@ describe("createTeamRun", () => {
     resolveMemberMock.mockClear()
   })
 
-  afterEach(async () => {
+  afterAll(async () => {
     await Promise.all(temporaryDirectories.splice(0).map(async (directoryPath) => rm(directoryPath, { recursive: true, force: true })))
   })
 
@@ -152,6 +152,9 @@ describe("createTeamRun", () => {
     // then
     expect(firstPrompt).toContain("Do not call lead-only lifecycle tools")
     expect(firstPrompt).not.toContain("3. Request shutdown via `team_shutdown_request`")
+    expect(firstPrompt).toContain("Include `summary` and `references`")
+    expect(firstPrompt).toContain("Move to `status: \"in_progress\"` when you start working")
+    expect(firstPrompt).toContain("delegate-task: Do not call this")
     expect(firstPrompt).toContain("lead can decide whether to request shutdown")
   })
 
@@ -327,7 +330,7 @@ describe("createTeamRun", () => {
     expect(leadMember?.model).toBeUndefined()
   })
 
-  test("still spawns the explicit lead when the caller agent does not match it", async () => {
+  test("reuses the caller session for the lead even when the lead subagent_type differs", async () => {
     // given
     const baseDir = await mkdtemp(path.join(tmpdir(), "team-runtime-explicit-lead-"))
     temporaryDirectories.push(baseDir)
@@ -360,14 +363,13 @@ describe("createTeamRun", () => {
     )
 
     // then
-    expect(launchMock).toHaveBeenCalledTimes(2)
+    expect(launchMock).toHaveBeenCalledTimes(1)
     expect(launchMock.mock.calls.map(([input]) => input.description)).toEqual([
-      "Create team member alpha-team/captain",
       "Create team member alpha-team/member-1",
     ])
     expect(runtimeState.members.map((member) => ({ name: member.name, sessionId: member.sessionId }))).toEqual([
-      { name: "captain", sessionId: "captain-agent-session-1" },
-      { name: "member-1", sessionId: "member-1-agent-session-2" },
+      { name: "captain", sessionId: "lead-session" },
+      { name: "member-1", sessionId: "member-1-agent-session-1" },
     ])
   })
 })

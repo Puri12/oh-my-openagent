@@ -88,4 +88,57 @@ describe("normalizeTeamSpecInput", () => {
     // then
     expect(result).toThrow("Caller agent explore is not eligible as team lead; specify leadAgentId explicitly")
   })
+
+  test("normalizes natural inline names to schema-safe names", () => {
+    // given
+    const rawSpec = {
+      name: "Project Analysis Team",
+      leadAgentId: "Agent Lead",
+      members: [
+        { kind: "category", name: "Agent Lead", category: "quick", prompt: "Lead the analysis work" },
+        { kind: "category", name: "Agent 1: Structure Analyst", category: "quick", prompt: "Inspect the workspace" },
+        { kind: "category", name: "Agent 1 Structure Analyst", category: "quick", prompt: "Inspect related tests" },
+      ],
+    }
+
+    // when
+    const normalizedSpec = normalizeTeamSpecInput(rawSpec, {
+      callerTeamLead: resolveCallerTeamLead("Sisyphus - Ultraworker"),
+    })
+
+    // then
+    expect(normalizedSpec).toMatchObject({
+      name: "project-analysis-team",
+      leadAgentId: "agent-lead",
+      members: [
+        { name: "agent-lead" },
+        { name: "agent-1-structure-analyst" },
+        { name: "agent-1-structure-analyst-2" },
+      ],
+    })
+  })
+
+  test("uses the provided default category for role-only natural members", () => {
+    // given
+    const rawSpec = {
+      name: "analysis-team",
+      members: [
+        { name: "Structure Analyst", role: "Structure Analyst", capabilities: ["structure", "modules"] },
+      ],
+    }
+
+    // when
+    const normalizedSpec = normalizeTeamSpecInput(rawSpec, {
+      callerTeamLead: resolveCallerTeamLead("Sisyphus - Ultraworker"),
+      defaultCategoryName: "analysis",
+    })
+
+    // then
+    expect(normalizedSpec).toMatchObject({
+      members: [
+        { name: "lead", kind: "subagent_type" },
+        { name: "structure-analyst", kind: "category", category: "analysis", prompt: "Role: Structure Analyst\nstructure, modules" },
+      ],
+    })
+  })
 })

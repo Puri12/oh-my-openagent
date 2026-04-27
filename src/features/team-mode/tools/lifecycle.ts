@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import type { TeamModeConfig } from "../../../config/schema/team-mode"
 import type { CategoriesConfig, AgentOverrides } from "../../../config/schema"
+import { mergeCategories } from "../../../shared/merge-categories"
 import type { OpencodeClient } from "../../../tools/delegate-task/types"
 import type { BackgroundManager } from "../../background-agent/manager"
 import type { TmuxSessionManager } from "../../tmux-subagent/manager"
@@ -16,6 +17,7 @@ import { listActiveTeams, loadRuntimeState } from "../team-state-store/store"
 import { TeamSpecSchema, type RuntimeState, type TeamSpec } from "../types"
 
 const ACTIVE_RUNTIME_STATUSES = new Set<RuntimeState["status"]>(["creating", "active", "shutdown_requested"])
+const TEAM_CREATE_USAGE = "team_create requires exactly one of teamName or inline_spec. Use team_create({ teamName: \"existing-team\" }) or team_create({ inline_spec: { name: \"team-name\", members: [{ name: \"worker\", category: \"quick\", prompt: \"Do the assigned work.\" }] } })."
 
 const TeamCreateArgsSchema = z.object({
   teamName: z.string().min(1).optional(),
@@ -44,6 +46,17 @@ type TeamLifecycleToolContext = ToolContext & {
 
 type TeamParticipant = { role: "lead" | "member"; memberName: string }
 
+type TeamCreateArgs = z.infer<typeof TeamCreateArgsSchema>
+
+function resolveDefaultInlineCategory(userCategories?: CategoriesConfig): string | undefined {
+  const userCategoryName = Object.entries(userCategories ?? {}).find(([, categoryConfig]) => categoryConfig.disable !== true)?.[0]
+  if (userCategoryName !== undefined) {
+    return userCategoryName
+  }
+
+  return Object.keys(mergeCategories(userCategories))[0]
+}
+
 function getLeadMemberName(runtimeState: RuntimeState): string {
   const leadMember = runtimeState.members.find((member) => member.agentType === "leader")
   if (!leadMember) throw new Error(`team '${runtimeState.teamRunId}' is missing a lead member`)
@@ -57,6 +70,26 @@ function sanitizeRuntimeState(runtimeState: RuntimeState): Omit<RuntimeState, "m
     ...runtimeState,
     members: runtimeState.members.map(({ lastInjectedTurnMarker: _turnMarker, pendingInjectedMessageIds: _pendingIds, ...member }) => member),
   }
+}
+
+function parseTeamCreateArgs(rawArgs: unknown): TeamCreateArgs {
+  const result = TeamCreateArgsSchema.safeParse(rawArgs)
+  if (!result.success) {
+    throw new Error(TEAM_CREATE_USAGE)
+  }
+
+  return result.data
+}
+
+function formatZodIssuePath(path: PropertyKey[]): string {
+  return path.length > 0 ? path.join(".") : "<root>"
+}
+
+function formatTeamSpecIssues(error: z.ZodError): string {
+  return error.issues
+    .slice(0, 5)
+    .map((issue) => `${formatZodIssuePath(issue.path)}: ${issue.message}`)
+    .join("; ")
 }
 
 function parseInlineTeamSpec(
@@ -73,7 +106,12 @@ function parseInlineTeamSpec(
     }
   }
 
-  const parsedSpec = TeamSpecSchema.parse(normalizeTeamSpecInput(specObject, options))
+  const parsedSpecResult = TeamSpecSchema.safeParse(normalizeTeamSpecInput(specObject, options))
+  if (!parsedSpecResult.success) {
+    throw new Error(`Invalid inline_spec for team_create: ${formatTeamSpecIssues(parsedSpecResult.error)}. Provide an object with name and members array. Example: team_create({ inline_spec: { name: "project-analysis-team", members: [{ name: "structure-analyst", category: "quick", prompt: "Analyze project structure." }] } }).`)
+  }
+
+  const parsedSpec = parsedSpecResult.data
   validateSpec(parsedSpec)
   return parsedSpec
 }
@@ -111,17 +149,22 @@ export function createTeamCreateTool(
 ): ToolDefinition {
   return tool({
     description: "Create a team run from a named or inline team spec.",
-    args: { teamName: tool.schema.string().optional(), inline_spec: tool.schema.unknown().optional(), leadSessionId: tool.schema.string().optional() },
+    args: {
+      teamName: tool.schema.string().optional().describe("Named team spec to load. Provide exactly one of teamName or inline_spec."),
+      inline_spec: tool.schema.unknown().optional().describe("Inline team spec object or JSON string. Provide exactly one of teamName or inline_spec."),
+      leadSessionId: tool.schema.string().optional().describe("Optional non-empty session ID override. Usually omit this and let team_create use the current session."),
+    },
     async execute(rawArgs, toolContext) {
-      const args = TeamCreateArgsSchema.parse(rawArgs)
+      const args = parseTeamCreateArgs(rawArgs)
       const runtimeContext = toolContext as TeamLifecycleToolContext
       const leadSessionId = args.leadSessionId ?? runtimeContext.sessionID
       if (!leadSessionId) throw new Error("team_create requires leadSessionId or tool context sessionID")
       const projectRoot = typeof runtimeContext.directory === "string" ? runtimeContext.directory : process.cwd()
       const callerTeamLead = resolveCallerTeamLead(runtimeContext.agent)
+      const defaultCategoryName = resolveDefaultInlineCategory(executorConfig?.userCategories)
       const spec = args.teamName
         ? await loadTeamSpec(args.teamName, config, projectRoot, { callerTeamLead })
-        : parseInlineTeamSpec(args.inline_spec, { callerTeamLead })
+        : parseInlineTeamSpec(args.inline_spec, { callerTeamLead, defaultCategoryName })
       const participantRuntime = await findParticipantRuntime(runtimeContext.sessionID, config)
       if (participantRuntime && (participantRuntime.teamName !== spec.name || participantRuntime.leadSessionId !== leadSessionId)) {
         throw new Error(`team_create denied: session is already a participant of team ${participantRuntime.teamRunId}`)

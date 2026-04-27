@@ -8,6 +8,12 @@ import path from "node:path"
 
 import { type ToolContext } from "@opencode-ai/plugin/tool"
 import { TeamModeConfigSchema } from "../../../config/schema/team-mode"
+import { _resetForTesting, registerAgentName } from "../../claude-code-session-state"
+import { SessionCategoryRegistry } from "../../../shared/session-category-registry"
+import {
+  clearAllSessionPromptParams,
+  getSessionPromptParams,
+} from "../../../shared/session-prompt-params-state"
 import { listUnreadMessages } from "../team-mailbox/inbox"
 import { BroadcastNotPermittedError } from "../team-mailbox/send"
 import { getInboxDir, resolveBaseDir } from "../team-registry/paths"
@@ -23,6 +29,7 @@ type PromptAsyncCall = {
   agent?: string
   model?: { providerID: string; modelID: string }
   variant?: string
+  directory?: string
 }
 
 type LiveDeliveryClient = {
@@ -35,6 +42,7 @@ type LiveDeliveryClient = {
         model?: { providerID: string; modelID: string }
         variant?: string
       }
+      query?: { directory: string }
     }): Promise<unknown>
   }
 }
@@ -51,6 +59,7 @@ function createRecordingClient(): { client: LiveDeliveryClient; calls: PromptAsy
           model?: { providerID: string; modelID: string }
           variant?: string
         }
+        query?: { directory: string }
       }) => {
         calls.push({
           sessionId: input.path.id,
@@ -58,6 +67,7 @@ function createRecordingClient(): { client: LiveDeliveryClient; calls: PromptAsy
           agent: input.body.agent,
           model: input.body.model,
           variant: input.body.variant,
+          directory: input.query?.directory,
         })
         return undefined
       },
@@ -74,6 +84,9 @@ const mockClient: LiveDeliveryClient = {
 
 afterEach(() => {
   clearTeamSessionRegistry()
+  SessionCategoryRegistry.clear()
+  clearAllSessionPromptParams()
+  _resetForTesting()
 })
 
 async function createFixtureBaseDir(): Promise<string> {
@@ -125,6 +138,9 @@ async function createTeamFixture() {
   runtimeState.members[0].sessionId = leadSessionId
   runtimeState.members[1].sessionId = memberOneSessionId
   runtimeState.members[2].sessionId = memberTwoSessionId
+  runtimeState.members[0].status = "idle"
+  runtimeState.members[1].status = "idle"
+  runtimeState.members[2].status = "idle"
   await saveRuntimeState(runtimeState, config)
 
   return {
@@ -206,10 +222,64 @@ describe("createTeamSendMessageTool", () => {
     // then
     expect(calls).toHaveLength(1)
     expect(calls[0].sessionId).toBe(fixture.memberTwoSessionId)
+    expect(calls[0].directory).toBe(resolveBaseDir(fixture.config))
     const envelopeText = calls[0].parts[0]?.text ?? ""
     expect(envelopeText).toContain("<peer_message")
     expect(envelopeText).toContain('from="m1"')
     expect(envelopeText).toContain("ping")
+  })
+
+  test("live delivery targets the recipient worktree when available", async () => {
+    // given
+    const fixture = await createTeamFixture()
+    const { loadRuntimeState: loadState, saveRuntimeState: saveState } = await import("../team-state-store/store")
+    const state = await loadState(fixture.teamRunId, fixture.config)
+    const memberTwo = state.members.find((member) => member.name === "m2")
+    if (!memberTwo) throw new Error("m2 runtime member missing")
+    memberTwo.worktreePath = "/tmp/team-worker-m2"
+    await saveState(state, fixture.config)
+
+    const { client, calls } = createRecordingClient()
+    const liveTool = createTeamSendMessageTool(fixture.config, client)
+
+    // when
+    await liveTool.execute({
+      teamRunId: fixture.teamRunId,
+      to: "m2",
+      body: "ping",
+    }, fixture.toolContext(fixture.memberOneSessionId))
+
+    // then
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.directory).toBe("/tmp/team-worker-m2")
+  })
+
+  test("live-delivers to running recipients so active teammates receive messages immediately", async () => {
+    // given
+    const fixture = await createTeamFixture()
+    const { loadRuntimeState: loadState, saveRuntimeState: saveState } = await import("../team-state-store/store")
+    const state = await loadState(fixture.teamRunId, fixture.config)
+    const memberTwo = state.members.find((member) => member.name === "m2")
+    if (!memberTwo) throw new Error("m2 runtime member missing")
+    memberTwo.status = "running"
+    await saveState(state, fixture.config)
+
+    const { client, calls } = createRecordingClient()
+    const liveTool = createTeamSendMessageTool(fixture.config, client)
+
+    // when
+    const result = await liveTool.execute({
+      teamRunId: fixture.teamRunId,
+      to: "m2",
+      body: "ping",
+    }, fixture.toolContext(fixture.memberOneSessionId))
+    const parsedResult = JSON.parse(result)
+
+    // then
+    expect(parsedResult.deliveredTo).toEqual(["m2"])
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.sessionId).toBe(fixture.memberTwoSessionId)
+    expect(calls[0]?.directory).toBe(resolveBaseDir(fixture.config))
   })
 
   test("live delivery pins the recipient's resolved subagent_type and model on promptAsync", async () => {
@@ -239,6 +309,80 @@ describe("createTeamSendMessageTool", () => {
     expect(calls[0].agent).toBe("atlas")
     expect(calls[0].model).toEqual({ providerID: "anthropic", modelID: "claude-opus-4-7" })
     expect(calls[0].variant).toBe("high")
+  })
+
+  test("live delivery uses the registered agent alias when the runtime stores a config-key agent name", async () => {
+    // given
+    registerAgentName("\u200B\u200B\u200B\u200BAtlas - Plan Executor")
+    const fixture = await createTeamFixture()
+    const { loadRuntimeState: loadState, saveRuntimeState: saveState } = await import("../team-state-store/store")
+    const state = await loadState(fixture.teamRunId, fixture.config)
+    const memberTwo = state.members.find((member) => member.name === "m2")
+    if (!memberTwo) throw new Error("m2 runtime member missing")
+    memberTwo.subagent_type = "atlas"
+    await saveState(state, fixture.config)
+
+    const { client, calls } = createRecordingClient()
+    const liveTool = createTeamSendMessageTool(fixture.config, client)
+
+    // when
+    await liveTool.execute({
+      teamRunId: fixture.teamRunId,
+      to: "m2",
+      body: "ping",
+    }, fixture.toolContext(fixture.memberOneSessionId))
+
+    // then
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.agent).toBe("\u200B\u200B\u200B\u200BAtlas - Plan Executor")
+  })
+
+  test("live delivery reapplies category routing and advanced model params for category members", async () => {
+    // given
+    const fixture = await createTeamFixture()
+    const { loadRuntimeState: loadState, saveRuntimeState: saveState } = await import("../team-state-store/store")
+    const state = await loadState(fixture.teamRunId, fixture.config)
+    const memberTwo = state.members.find((member) => member.name === "m2")
+    if (!memberTwo) throw new Error("m2 runtime member missing")
+    memberTwo.subagent_type = "Sisyphus-Junior"
+    memberTwo.category = "quick"
+    memberTwo.model = {
+      providerID: "openai",
+      modelID: "gpt-5.4",
+      variant: "medium",
+      reasoningEffort: "high",
+      temperature: 0.2,
+      top_p: 0.8,
+      maxTokens: 4096,
+      thinking: { type: "enabled", budgetTokens: 2048 },
+    }
+    await saveState(state, fixture.config)
+
+    const { client, calls } = createRecordingClient()
+    const liveTool = createTeamSendMessageTool(fixture.config, client)
+
+    // when
+    await liveTool.execute({
+      teamRunId: fixture.teamRunId,
+      to: "m2",
+      body: "ping",
+    }, fixture.toolContext(fixture.memberOneSessionId))
+
+    // then
+    expect(calls).toHaveLength(1)
+    expect(calls[0].agent).toBe("Sisyphus-Junior")
+    expect(calls[0].model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+    expect(calls[0].variant).toBe("medium")
+    expect(SessionCategoryRegistry.get(fixture.memberTwoSessionId)).toBe("quick")
+    expect(getSessionPromptParams(fixture.memberTwoSessionId)).toEqual({
+      temperature: 0.2,
+      topP: 0.8,
+      maxOutputTokens: 4096,
+      options: {
+        reasoningEffort: "high",
+        thinking: { type: "enabled", budgetTokens: 2048 },
+      },
+    })
   })
 
   test("live delivery omits agent and model on promptAsync when the runtime member has none recorded", async () => {
@@ -458,5 +602,22 @@ describe("createTeamSendMessageTool", () => {
 
     // then
     expect(result).rejects.toBeInstanceOf(Error)
+  })
+
+  test("rejects a non-UUID correlationId before writing the message", async () => {
+    // given
+    const fixture = await createTeamFixture()
+
+    // when
+    const result = fixture.tool.execute({
+      teamRunId: fixture.teamRunId,
+      to: "m2",
+      body: "hello",
+      correlationId: "task-1",
+    }, fixture.toolContext(fixture.memberOneSessionId))
+
+    // then
+    await expect(result).rejects.toThrow("correlationId")
+    await expect(readdir(getInboxDir(resolveBaseDir(fixture.config), fixture.teamRunId, "m2"))).rejects.toThrow()
   })
 })

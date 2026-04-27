@@ -196,8 +196,8 @@ describe("createBuiltinAgents with model overrides", () => {
      // #when
      const agents = await createBuiltinAgents([], {}, undefined, TEST_DEFAULT_MODEL, undefined, undefined, [], undefined, undefined)
 
-     // #then - oracle resolves via connected cache fallback to openai/gpt-5.4 (not system default)
-     expect(agents.oracle.model).toBe("openai/gpt-5.4")
+     // #then - oracle resolves via connected cache fallback to openai/gpt-5.5 (not system default)
+     expect(agents.oracle.model).toBe("openai/gpt-5.5")
      expect(agents.oracle.reasoningEffort).toBe("medium")
      expect(agents.oracle.thinking).toBeUndefined()
      cacheSpy.mockRestore?.()
@@ -223,14 +223,14 @@ describe("createBuiltinAgents with model overrides", () => {
     const providerModelsSpy = spyOn(connectedProvidersCache, "readProviderModelsCache").mockReturnValue(null)
     const fetchSpy = spyOn(shared, "fetchAvailableModels").mockResolvedValue(new Set())
     const overrides = {
-      oracle: { model: "openai/gpt-5.4" },
+      oracle: { model: "openai/gpt-5.5" },
     }
 
     // #when
     const agents = await createBuiltinAgents([], overrides, undefined, TEST_DEFAULT_MODEL, undefined, undefined, [], undefined, undefined)
 
     // #then
-    expect(agents.oracle.model).toBe("openai/gpt-5.4")
+    expect(agents.oracle.model).toBe("openai/gpt-5.5")
     expect(agents.oracle.reasoningEffort).toBe("medium")
     expect(agents.oracle.textVerbosity).toBe("high")
     expect(agents.oracle.thinking).toBeUndefined()
@@ -523,9 +523,9 @@ describe("createBuiltinAgents without systemDefaultModel", () => {
      const agents = await createBuiltinAgents([], {}, undefined, undefined)
 
      // #then - connected cache enables model resolution despite no systemDefaultModel
-     expect(agents.oracle).toBeDefined()
-     expect(agents.oracle.model).toBe("openai/gpt-5.4")
-     cacheSpy.mockRestore?.()
+      expect(agents.oracle).toBeDefined()
+      expect(agents.oracle.model).toBe("openai/gpt-5.5")
+      cacheSpy.mockRestore?.()
      providerModelsSpy.mockRestore()
      fetchSpy.mockRestore()
    })
@@ -541,7 +541,7 @@ describe("createBuiltinAgents without systemDefaultModel", () => {
 
       // #then
       expect(agents.oracle).toBeDefined()
-      expect(agents.oracle.model).toBe("openai/gpt-5.4")
+      expect(agents.oracle.model).toBe("openai/gpt-5.5")
     } finally {
       fetchSpy.mockRestore()
       cacheSpy.mockRestore()
@@ -689,7 +689,7 @@ describe("createBuiltinAgents with requiresProvider gating (hephaestus)", () => 
 
       // #then
       expect(agents.hephaestus).toBeDefined()
-      expect(agents.hephaestus.model).toBe("openai/gpt-5.4")
+      expect(agents.hephaestus.model).toBe("openai/gpt-5.5")
     } finally {
       cacheSpy.mockRestore()
       fetchSpy.mockRestore()
@@ -1016,7 +1016,7 @@ describe("createBuiltinAgents with requiresAnyModel gating (sisyphus)", () => {
 
   test("atlas and metis resolve to OpenAI in an OpenAI-only environment without a system default", async () => {
     // #given
-    const fetchSpy = spyOn(shared, "fetchAvailableModels").mockResolvedValue(new Set(["openai/gpt-5.4"]))
+    const fetchSpy = spyOn(shared, "fetchAvailableModels").mockResolvedValue(new Set(["openai/gpt-5.5"]))
     const cacheSpy = spyOn(connectedProvidersCache, "readConnectedProvidersCache").mockReturnValue(["openai"])
 
     try {
@@ -1025,10 +1025,10 @@ describe("createBuiltinAgents with requiresAnyModel gating (sisyphus)", () => {
 
       // #then
       expect(agents.atlas).toBeDefined()
-      expect(agents.atlas.model).toBe("openai/gpt-5.4")
+      expect(agents.atlas.model).toBe("openai/gpt-5.5")
       expect(agents.atlas.variant).toBe("medium")
       expect(agents.metis).toBeDefined()
-      expect(agents.metis.model).toBe("openai/gpt-5.4")
+      expect(agents.metis.model).toBe("openai/gpt-5.5")
       expect(agents.metis.variant).toBe("high")
     } finally {
       fetchSpy.mockRestore()
@@ -1185,7 +1185,7 @@ describe("buildAgent with category and skills", () => {
     const agent = buildAgent(source["test-agent"], TEST_MODEL)
 
     // #then - category's built-in model and skills are applied
-    expect(agent.model).toBe("openai/gpt-5.4")
+    expect(agent.model).toBe("openai/gpt-5.5")
     expect(agent.variant).toBe("xhigh")
     expect(agent.prompt).toContain("Role: Designer-Turned-Developer")
     expect(agent.prompt).toContain("Task description")
@@ -1309,9 +1309,9 @@ describe("override.category expansion in createBuiltinAgents", () => {
     // #when
     const agents = await createBuiltinAgents([], overrides, undefined, TEST_DEFAULT_MODEL)
 
-    // #then - ultrabrain category: model=openai/gpt-5.4, variant=xhigh
+    // #then - ultrabrain category: model=openai/gpt-5.5, variant=xhigh
     expect(agents.oracle).toBeDefined()
-    expect(agents.oracle.model).toBe("openai/gpt-5.4")
+    expect(agents.oracle.model).toBe("openai/gpt-5.5")
     expect(agents.oracle.variant).toBe("xhigh")
   })
 
@@ -1378,9 +1378,9 @@ describe("override.category expansion in createBuiltinAgents", () => {
     // #when
     const agents = await createBuiltinAgents([], overrides, undefined, TEST_DEFAULT_MODEL)
 
-    // #then - ultrabrain category: model=openai/gpt-5.4, variant=xhigh
+    // #then - ultrabrain category: model=openai/gpt-5.5, variant=xhigh
     expect(agents.sisyphus).toBeDefined()
-    expect(agents.sisyphus.model).toBe("openai/gpt-5.4")
+    expect(agents.sisyphus.model).toBe("openai/gpt-5.5")
     expect(agents.sisyphus.variant).toBe("xhigh")
   })
 
@@ -1393,9 +1393,9 @@ describe("override.category expansion in createBuiltinAgents", () => {
     // #when
     const agents = await createBuiltinAgents([], overrides, undefined, TEST_DEFAULT_MODEL)
 
-    // #then - ultrabrain category: model=openai/gpt-5.4, variant=xhigh
+    // #then - ultrabrain category: model=openai/gpt-5.5, variant=xhigh
     expect(agents.atlas).toBeDefined()
-    expect(agents.atlas.model).toBe("openai/gpt-5.4")
+    expect(agents.atlas.model).toBe("openai/gpt-5.5")
     expect(agents.atlas.variant).toBe("xhigh")
   })
 

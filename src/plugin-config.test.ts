@@ -128,7 +128,7 @@ describe("mergeConfigs", () => {
     it("should deep merge agents", () => {
       const base = createConfig({
         agents: {
-          oracle: { model: "openai/gpt-5.4" },
+          oracle: { model: "openai/gpt-5.5" },
         },
       });
 
@@ -141,7 +141,7 @@ describe("mergeConfigs", () => {
 
       const result = mergeConfigs(base, override);
 
-      expect(result.agents?.oracle).toMatchObject({ model: "openai/gpt-5.4" });
+      expect(result.agents?.oracle).toMatchObject({ model: "openai/gpt-5.5" });
       expect(result.agents?.oracle?.temperature).toBe(0.5);
       expect(result.agents?.explore).toMatchObject({ model: "anthropic/claude-haiku-4-5" });
     });
@@ -232,7 +232,7 @@ describe("parseConfigPartially", () => {
     it("should return the full config when everything is valid", () => {
       const rawConfig = {
         agents: {
-          oracle: { model: "openai/gpt-5.4" },
+          oracle: { model: "openai/gpt-5.5" },
           momus: { model: "openai/gpt-5.4" },
         },
         disabled_hooks: ["comment-checker"],
@@ -241,7 +241,7 @@ describe("parseConfigPartially", () => {
       const result = parseConfigPartially(rawConfig);
 
       expect(result).not.toBeNull();
-      expect(result!.agents?.oracle).toMatchObject({ model: "openai/gpt-5.4" });
+      expect(result!.agents?.oracle).toMatchObject({ model: "openai/gpt-5.5" });
       expect(result!.agents?.momus).toMatchObject({ model: "openai/gpt-5.4" });
       expect(result!.disabled_hooks).toEqual(["comment-checker"]);
     });
@@ -255,7 +255,7 @@ describe("parseConfigPartially", () => {
     it("should preserve valid agent overrides when another section is invalid", () => {
       const rawConfig = {
         agents: {
-          oracle: { model: "openai/gpt-5.4" },
+          oracle: { model: "openai/gpt-5.5" },
           momus: { model: "openai/gpt-5.4" },
           prometheus: {
             permission: {
@@ -276,7 +276,7 @@ describe("parseConfigPartially", () => {
     it("should preserve valid agents when a non-agent section is invalid", () => {
       const rawConfig = {
         agents: {
-          oracle: { model: "openai/gpt-5.4" },
+          oracle: { model: "openai/gpt-5.5" },
         },
         disabled_hooks: ["not-a-real-hook"],
       };
@@ -284,7 +284,7 @@ describe("parseConfigPartially", () => {
       const result = parseConfigPartially(rawConfig);
 
       expect(result).not.toBeNull();
-      expect(result!.agents?.oracle).toMatchObject({ model: "openai/gpt-5.4" });
+      expect(result!.agents?.oracle).toMatchObject({ model: "openai/gpt-5.5" });
       expect(result!.disabled_hooks).toEqual(["not-a-real-hook"]);
     });
   });
@@ -335,7 +335,7 @@ describe("parseConfigPartially", () => {
     it("should ignore unknown keys and return valid sections", () => {
       const rawConfig = {
         agents: {
-          oracle: { model: "openai/gpt-5.4" },
+          oracle: { model: "openai/gpt-5.5" },
         },
         some_future_key: { foo: "bar" },
       };
@@ -343,7 +343,7 @@ describe("parseConfigPartially", () => {
       const result = parseConfigPartially(rawConfig);
 
       expect(result).not.toBeNull();
-      expect(result!.agents?.oracle).toMatchObject({ model: "openai/gpt-5.4" });
+      expect(result!.agents?.oracle).toMatchObject({ model: "openai/gpt-5.5" });
       expect((result as Record<string, unknown>)["some_future_key"]).toBeUndefined();
     });
   });
@@ -393,7 +393,7 @@ describe("loadPluginConfig", () => {
     tempDirs.push(rootDir)
     mkdirSync(userConfigDir, { recursive: true })
     mkdirSync(projectConfigDir, { recursive: true })
-    writeFileSync(legacyConfigPath, JSON.stringify({ agents: { oracle: { model: "openai/gpt-5.4" } } }))
+    writeFileSync(legacyConfigPath, JSON.stringify({ agents: { oracle: { model: "openai/gpt-5.5" } } }))
 
     process.env.OPENCODE_CONFIG_DIR = userConfigDir
 
@@ -406,8 +406,8 @@ describe("loadPluginConfig", () => {
     // then
     expect(existsSync(legacyConfigPath)).toBe(false)
     expect(existsSync(backupConfigPath)).toBe(true)
-    expect(readFileSync(canonicalConfigPath, "utf-8")).toContain('"openai/gpt-5.4"')
-    expect(reloadedConfig.agents?.oracle?.model).toBe("openai/gpt-5.4")
+    expect(readFileSync(canonicalConfigPath, "utf-8")).toContain('"openai/gpt-5.5"')
+    expect(reloadedConfig.agents?.oracle?.model).toBe("openai/gpt-5.5")
   })
 
   it("should still load config from legacy path when migration fails", async () => {
@@ -421,7 +421,7 @@ describe("loadPluginConfig", () => {
     tempDirs.push(rootDir)
     mkdirSync(userConfigDir, { recursive: true })
     mkdirSync(projectConfigDir, { recursive: true })
-    writeFileSync(legacyConfigPath, JSON.stringify({ agents: { oracle: { model: "openai/gpt-5.4" } } }))
+    writeFileSync(legacyConfigPath, JSON.stringify({ agents: { oracle: { model: "openai/gpt-5.5" } } }))
 
     // Make the directory read-only so migration write fails
     // (simulates Windows file lock / permission issues)
@@ -444,7 +444,7 @@ describe("loadPluginConfig", () => {
     }
 
     // then - should still load the config from legacy path
-    expect(config.agents?.oracle?.model).toBe("openai/gpt-5.4")
+    expect(config.agents?.oracle?.model).toBe("openai/gpt-5.5")
   })
 
   it("should load migrated legacy project config on the first load", async () => {
@@ -459,7 +459,7 @@ describe("loadPluginConfig", () => {
     tempDirs.push(rootDir)
     mkdirSync(userConfigDir, { recursive: true })
     mkdirSync(projectConfigDir, { recursive: true })
-    writeFileSync(legacyConfigPath, JSON.stringify({ agents: { oracle: { model: "openai/gpt-5.4" } } }))
+    writeFileSync(legacyConfigPath, JSON.stringify({ agents: { oracle: { model: "openai/gpt-5.5" } } }))
 
     process.env.OPENCODE_CONFIG_DIR = userConfigDir
 
@@ -470,7 +470,7 @@ describe("loadPluginConfig", () => {
     // then
     expect(existsSync(legacyConfigPath)).toBe(false)
     expect(existsSync(canonicalConfigPath)).toBe(true)
-    expect(config.agents?.oracle?.model).toBe("openai/gpt-5.4")
+    expect(config.agents?.oracle?.model).toBe("openai/gpt-5.5")
   })
 
   it("should preserve explicit user git_master settings when project config omits git_master", async () => {
@@ -498,7 +498,7 @@ describe("loadPluginConfig", () => {
       join(projectConfigDir, "oh-my-openagent.jsonc"),
       JSON.stringify({
         agents: {
-          hephaestus: { model: "openai/gpt-5.4" },
+          hephaestus: { model: "openai/gpt-5.5" },
         },
       })
     )

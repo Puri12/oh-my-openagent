@@ -20,11 +20,11 @@ function clone<TValue>(value: TValue): TValue {
   return structuredClone(value)
 }
 
-function createToolContext(sessionID: string): ToolContext {
+function createToolContext(sessionID: string, agent = "test-agent"): ToolContext {
   return {
     sessionID,
     messageID: randomUUID(),
-    agent: "test-agent",
+    agent,
     directory: "/project",
     worktree: "/project",
     abort: new AbortController().signal,
@@ -146,5 +146,157 @@ describe("createTeamCreateTool inline_spec normalization", () => {
     // then
     expect(result.runtimeState.members.map((member: { name: string }) => member.name)).toEqual(["lead", "quick-1", "deep-1", "deep-2"])
     expect(result.runtimeState.teamName).toBe("ccapi-explorers-v2")
+  })
+
+  test("accepts category members written with natural inline prompt fields", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never)
+    const inlineSpec = {
+      name: "project-analysis-team",
+      description: "Analyze the codebase from structure, core logic, and quality angles.",
+      members: [
+        {
+          name: "structure-analyst",
+          category: "quick",
+          loadSkills: [],
+          systemPrompt: "Focus on directory layouts, module boundaries, and architectural organization.",
+        },
+        {
+          name: "core-logic-analyst",
+          category: "quick",
+          loadSkills: [],
+          systemPrompt: "Focus on initialization flows, plugin architecture, hooks, tools, and MCP integration.",
+        },
+        {
+          name: "quality-analyst",
+          category: "quick",
+          loadSkills: [],
+          systemPrompt: "Focus on tests, CI/CD, build scripts, conventions, and anti-pattern enforcement.",
+        },
+      ],
+    }
+
+    // when
+    await teamCreateTool.execute({ inline_spec: inlineSpec }, createToolContext("lead-session", "Sisyphus"))
+    const firstCall = createTeamRunMock.mock.calls[0]
+
+    // then
+    expect(firstCall?.[0]).toMatchObject({
+      leadAgentId: "lead",
+      members: [
+        { name: "lead", kind: "subagent_type" },
+        { name: "structure-analyst", kind: "category", category: "quick", prompt: "Focus on directory layouts, module boundaries, and architectural organization." },
+        { name: "core-logic-analyst", kind: "category", category: "quick", prompt: "Focus on initialization flows, plugin architecture, hooks, tools, and MCP integration." },
+        { name: "quality-analyst", kind: "category", category: "quick", prompt: "Focus on tests, CI/CD, build scripts, conventions, and anti-pattern enforcement." },
+      ],
+    })
+  })
+
+  test("explains how to call team_create when arguments are empty", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never)
+
+    // when
+    const result = teamCreateTool.execute({}, createToolContext("lead-session", "Sisyphus"))
+
+    // then
+    await expect(result).rejects.toThrow("team_create requires exactly one of teamName or inline_spec")
+    await expect(result).rejects.toThrow("team_create({ inline_spec: { name:")
+  })
+
+  test("explains how to shape inline_spec when members are missing", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never)
+
+    // when
+    const result = teamCreateTool.execute({ inline_spec: { name: "project-analysis-team" } }, createToolContext("lead-session", "Sisyphus"))
+
+    // then
+    await expect(result).rejects.toThrow("Invalid inline_spec for team_create")
+    await expect(result).rejects.toThrow("members array")
+  })
+
+  test("accepts natural team and member names in inline_spec", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never)
+    const inlineSpec = {
+      name: "Project Analysis Team",
+      members: [
+        { name: "Agent 1: Structure Analyst", category: "quick", prompt: "Analyze project structure and report concrete files." },
+        { name: "Agent 2: Core Logic Analyst", category: "quick", prompt: "Analyze initialization flow and report concrete functions." },
+        { name: "Agent 3: Quality/Process Analyst", category: "quick", prompt: "Analyze tests, builds, CI, and conventions." },
+      ],
+    }
+
+    // when
+    await teamCreateTool.execute({ inline_spec: inlineSpec }, createToolContext("lead-session", "Sisyphus"))
+    const firstCall = createTeamRunMock.mock.calls[0]
+
+    // then
+    expect(firstCall?.[0]).toMatchObject({
+      name: "project-analysis-team",
+      members: [
+        { name: "lead", kind: "subagent_type" },
+        { name: "agent-1-structure-analyst", kind: "category", category: "quick" },
+        { name: "agent-2-core-logic-analyst", kind: "category", category: "quick" },
+        { name: "agent-3-quality-process-analyst", kind: "category", category: "quick" },
+      ],
+    })
+  })
+
+  test("accepts role and capabilities style members with the configured fallback category", async () => {
+    // given
+    const createTeamCreateTool = await loadCreateTeamCreateTool()
+    const config = createConfig()
+    const teamCreateTool = createTeamCreateTool(config, {} as never, undefined as never, undefined, {
+      userCategories: {
+        analysis: {},
+      },
+    })
+    const inlineSpec = {
+      name: "Project Analysis Team",
+      members: [
+        {
+          name: "Agent 1: Structure Analyst",
+          kind: "agent",
+          role: "Structure Analyst",
+          capabilities: ["directory layouts", "module boundaries"],
+        },
+        {
+          name: "Agent 2: Core Logic Analyst",
+          kind: "quick",
+          role: "Core Logic Analyst",
+          description: "Analyze initialization flow and plugin architecture.",
+        },
+        {
+          name: "Agent 3: Quality/Process Analyst",
+          role: "Quality/Process Analyst",
+          responsibilities: ["tests", "builds", "CI/CD"],
+        },
+      ],
+    }
+
+    // when
+    await teamCreateTool.execute({ inline_spec: inlineSpec }, createToolContext("lead-session", "Sisyphus"))
+    const firstCall = createTeamRunMock.mock.calls[0]
+
+    // then
+    expect(firstCall?.[0]).toMatchObject({
+      name: "project-analysis-team",
+      members: [
+        { name: "lead", kind: "subagent_type" },
+        { name: "agent-1-structure-analyst", kind: "category", category: "analysis", prompt: "Role: Structure Analyst\ndirectory layouts, module boundaries" },
+        { name: "agent-2-core-logic-analyst", kind: "category", category: "quick", prompt: "Role: Core Logic Analyst\nAnalyze initialization flow and plugin architecture." },
+        { name: "agent-3-quality-process-analyst", kind: "category", category: "analysis", prompt: "Role: Quality/Process Analyst\ntests, builds, CI/CD" },
+      ],
+    })
   })
 })

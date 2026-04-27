@@ -18,7 +18,9 @@ Team mode gives Claude Code Agent Teams parity. It is off by default. Enable it 
 
 Create a team at \`~/.omo/teams/{name}/config.json\`.
 
-This TeamSpec uses a lead plus members list.
+You can also pass the same object directly to \`team_create({ inline_spec: ... })\`.
+
+This TeamSpec uses a lead plus members list. Every canonical member has a \`kind\` discriminator.
 
 Example:
 
@@ -43,6 +45,33 @@ Example:
 }
 \`\`\`
 
+Inline shorthand is accepted for category members. If \`kind\` is omitted, \`category\` implies \`kind: "category"\`. If a member uses natural planning fields like \`role\`, \`description\`, \`capabilities\`, or an unknown \`kind\`, it becomes a category worker using the current config's first enabled category. If \`kind\` is an unknown string such as a category name, that string is used as the category. \`systemPrompt\` is accepted as a \`prompt\` alias, and \`loadSkills\` is ignored because team members receive their behavior through \`prompt\`.
+
+Example:
+
+\`\`\`json
+{
+  "name": "project-analysis-team",
+  "members": [
+    {
+      "name": "structure-analyst",
+      "category": "quick",
+      "systemPrompt": "Analyze directory layouts, module boundaries, and architectural organization."
+    },
+    {
+      "name": "quality-analyst",
+      "category": "quick",
+      "systemPrompt": "Analyze tests, CI/CD, build scripts, conventions, and anti-patterns."
+    },
+    {
+      "name": "Agent 3: Quality/Process Analyst",
+      "role": "Quality/Process Analyst",
+      "capabilities": ["tests", "builds", "CI/CD"]
+    }
+  ]
+}
+\`\`\`
+
 ## Member schema
 
 Use \`kind: "category"\` when you want a category-backed worker. It must include both \`category\` and \`prompt\`. D-40: category members always route through \`sisyphus-junior\`.
@@ -62,7 +91,7 @@ Do not use \`oracle\`, \`prometheus\`, or other non-eligible agents here. For th
 
 ## Lifecycle
 
-1. Lead creates the team with \`team_create\`.
+1. Lead creates the team with \`team_create({ teamName: "existing-team" })\` or \`team_create({ inline_spec: { name: "team-name", members: [...] } })\`. Never call \`team_create\` with empty arguments.
 2. Lead assigns work with \`team_send_message\` or \`team_task_create\`.
 3. Members report progress with \`team_send_message\` plus \`team_task_update\`.
 4. Lead and members track progress with \`team_task_list\`, \`team_task_get\`, and \`team_status\`.
