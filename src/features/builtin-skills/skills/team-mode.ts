@@ -45,7 +45,7 @@ Example:
 }
 \`\`\`
 
-Inline shorthand is accepted for category members. If \`kind\` is omitted, \`category\` implies \`kind: "category"\`. \`systemPrompt\` is accepted as a \`prompt\` alias, and \`loadSkills\` is ignored because team members receive their behavior through \`prompt\`.
+Inline shorthand is accepted for category members. If \`kind\` is omitted, \`category\` implies \`kind: "category"\`. If a member uses natural planning fields like \`role\`, \`description\`, \`capabilities\`, or an unknown \`kind\`, it becomes a category worker using the current config's first enabled category. If \`kind\` is an unknown string such as a category name, that string is used as the category. \`systemPrompt\` is accepted as a \`prompt\` alias, and \`loadSkills\` is ignored because team members receive their behavior through \`prompt\`.
 
 Example:
 
@@ -62,6 +62,11 @@ Example:
       "name": "quality-analyst",
       "category": "quick",
       "systemPrompt": "Analyze tests, CI/CD, build scripts, conventions, and anti-patterns."
+    },
+    {
+      "name": "Agent 3: Quality/Process Analyst",
+      "role": "Quality/Process Analyst",
+      "capabilities": ["tests", "builds", "CI/CD"]
     }
   ]
 }
