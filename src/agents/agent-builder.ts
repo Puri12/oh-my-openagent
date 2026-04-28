@@ -1,9 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentFactory } from "./types"
-import type { CategoriesConfig, CategoryConfig, GitMasterConfig } from "../config/schema"
-import type { BrowserAutomationProvider } from "../config/schema"
+import type { CategoriesConfig, CategoryConfig } from "../config/schema"
 import { mergeCategories } from "../shared/merge-categories"
-import { resolveMultipleSkills } from "../features/opencode-skill-loader/skill-content"
 
 export type AgentSource = AgentFactory | AgentConfig
 
