@@ -10,7 +10,6 @@ export const TeamModeConfigSchema = z.object({
   max_wall_clock_minutes: z.number().int().min(1).default(120),
   max_member_turns: z.number().int().min(1).default(500),
   base_dir: z.string().optional(),
-  member_delegate_task_budget: z.number().int().min(0).default(0),
   message_payload_max_bytes: z.number().int().min(1024).default(32768),
   recipient_unread_max_bytes: z.number().int().min(1024).default(262144),
   mailbox_poll_interval_ms: z.number().int().min(500).default(3000),

@@ -72,8 +72,37 @@ function serializeRuntimeState(runtimeState: RuntimeState): string {
   return `${JSON.stringify(parsedRuntimeState, null, 2)}\n`
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function stripLegacyRuntimeStateMemberFields(member: unknown): unknown {
+  if (!isRecord(member)) {
+    return member
+  }
+
+  const { delegateTaskCallsUsed: _delegateTaskCallsUsed, ...memberWithoutLegacyFields } = member
+  return memberWithoutLegacyFields
+}
+
+function stripLegacyRuntimeStateFields(rawState: unknown): unknown {
+  if (!isRecord(rawState)) {
+    return rawState
+  }
+
+  const members = rawState["members"]
+  if (!Array.isArray(members)) {
+    return rawState
+  }
+
+  return {
+    ...rawState,
+    members: members.map(stripLegacyRuntimeStateMemberFields),
+  }
+}
+
 function validateRuntimeState(rawState: unknown, teamRunId: string): RuntimeState {
-  const parsedRuntimeState = RuntimeStateSchema.safeParse(rawState)
+  const parsedRuntimeState = RuntimeStateSchema.safeParse(stripLegacyRuntimeStateFields(rawState))
   if (!parsedRuntimeState.success) {
     throw new RuntimeStateError(
       `runtime state invalid for ${teamRunId}: ${parsedRuntimeState.error.message}`,
@@ -113,7 +142,6 @@ export async function createRuntimeState(
       status: "pending",
       color: member.color,
       worktreePath: member.worktreePath,
-      delegateTaskCallsUsed: 0,
       lastInjectedTurnMarker: undefined,
       pendingInjectedMessageIds: [],
     })),

@@ -11,7 +11,7 @@ import {
   registerTeamSession,
 } from "../../features/team-mode/team-session-registry"
 import type { RuntimeState } from "../../features/team-mode/types"
-import { loadRuntimeState, saveRuntimeState } from "../../features/team-mode/team-state-store/store"
+import { saveRuntimeState } from "../../features/team-mode/team-state-store/store"
 import { createTeamToolGating } from "./hook"
 
 function createConfig(overrides?: Partial<TeamModeConfig>, baseDir = "/tmp/team-mode"): TeamModeConfig {
@@ -24,7 +24,6 @@ function createConfig(overrides?: Partial<TeamModeConfig>, baseDir = "/tmp/team-
     max_wall_clock_minutes: 120,
     max_member_turns: 500,
     base_dir: baseDir,
-    member_delegate_task_budget: 1,
     message_payload_max_bytes: 32_768,
     recipient_unread_max_bytes: 262_144,
     mailbox_poll_interval_ms: 3_000,
@@ -154,35 +153,17 @@ describe("createTeamToolGating", () => {
     await expect(result).rejects.toThrow("team_approve_shutdown: caller must be target member or team lead")
   })
 
-  test("blocks delegate-task for members when budget is zero", async () => {
+  test("allows delegate-task for team members without a run-wide budget", async () => {
     // given
     const baseDir = await mkdtemp(path.join(tmpdir(), "team-tool-gating-"))
     temporaryDirectories.push(baseDir)
     await seedTeams(baseDir, createRuntimeState())
 
     // when
-    const result = runHook("delegate-task", "member-session-1", {}, { member_delegate_task_budget: 0 }, baseDir)
+    const result = runHook("delegate-task", "member-session-1", {}, undefined, baseDir)
 
     // then
-    await expect(result).rejects.toThrow("member delegate-task budget exhausted")
-  })
-
-  test("consumes member delegate-task budget per call and rejects once exhausted", async () => {
-    // given
-    const baseDir = await mkdtemp(path.join(tmpdir(), "team-tool-gating-"))
-    temporaryDirectories.push(baseDir)
-    await seedTeams(baseDir, createRuntimeState())
-
-    // when
-    await expect(runHook("delegate-task", "member-session-1", {}, { member_delegate_task_budget: 2 }, baseDir)).resolves.toBeUndefined()
-    await expect(runHook("delegate-task", "member-session-1", {}, { member_delegate_task_budget: 2 }, baseDir)).resolves.toBeUndefined()
-    const thirdCall = runHook("delegate-task", "member-session-1", {}, { member_delegate_task_budget: 2 }, baseDir)
-
-    // then
-    await expect(thirdCall).rejects.toThrow("member delegate-task budget exhausted")
-    const runtimeState = await loadRuntimeState("11111111-1111-4111-8111-111111111111", TeamModeConfigSchema.parse({ base_dir: baseDir, enabled: true }))
-    const member = runtimeState.members.find((entry) => entry.name === "m1")
-    expect(member?.delegateTaskCallsUsed).toBe(2)
+    await expect(result).resolves.toBeUndefined()
   })
 
   test("allows team_delete for the lead of the target team", async () => {

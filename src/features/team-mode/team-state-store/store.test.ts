@@ -192,6 +192,26 @@ describe("runtime state store", () => {
     expect(persistedState.status).toBe("creating")
   })
 
+  test("loadRuntimeState accepts legacy member delegate counters without preserving them", async () => {
+    // given
+    const baseDir = await createTemporaryBaseDir()
+    temporaryDirectories.push(baseDir)
+    const config = createConfig(baseDir)
+    const runtimeState = await createRuntimeState(createSpec(), undefined, "user", config)
+    const statePath = path.join(baseDir, "runtime", runtimeState.teamRunId, "state.json")
+    await writeFile(statePath, JSON.stringify({
+      ...runtimeState,
+      members: runtimeState.members.map((member) => ({ ...member, delegateTaskCallsUsed: 3 })),
+    }))
+
+    // when
+    const persistedState = await loadRuntimeState(runtimeState.teamRunId, config)
+
+    // then
+    expect(persistedState.members).toHaveLength(2)
+    expect(Object.keys(persistedState.members[0] ?? {})).not.toContain("delegateTaskCallsUsed")
+  })
+
   test("listActiveTeams skips malformed runtime states and logs them", async () => {
     // given
     const baseDir = await createTemporaryBaseDir()

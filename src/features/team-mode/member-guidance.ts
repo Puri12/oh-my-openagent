@@ -1,10 +1,6 @@
 import type { TeamModeConfig } from "../../config/schema/team-mode"
 
-export function buildTeammateCommunicationAddendum(config: TeamModeConfig): string {
-  const delegateTaskGuidance = config.member_delegate_task_budget > 0
-    ? `- delegate-task: You may use this for bounded side work when needed. You have a budget of ${config.member_delegate_task_budget} calls for this team run.`
-    : "- delegate-task: Do not call this. Member delegate budget is disabled for this team run."
-
+export function buildTeammateCommunicationAddendum(_config: TeamModeConfig): string {
   return `
 # Team Communication
 
@@ -19,7 +15,7 @@ Use these tools instead:
 - team_task_update: Update your task status. Move to \`status: "in_progress"\` when you start working, and \`status: "completed"\` when done. \`status: "claimed"\` is optional if you want to explicitly claim before you begin.
 - team_task_list: See all team tasks and their status.
 - team_task_get: Get details of a specific task.
-${delegateTaskGuidance}
+- delegate-task: Do not call this from inside team members.
 
 When you finish your assigned work, ALWAYS:
 1. Send your results to lead via team_send_message

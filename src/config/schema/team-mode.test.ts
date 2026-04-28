@@ -22,8 +22,6 @@ describe("TeamModeConfigSchema", () => {
         max_messages_per_run: 10000,
         max_wall_clock_minutes: 120,
         max_member_turns: 500,
-        base_dir: undefined,
-        member_delegate_task_budget: 0,
         message_payload_max_bytes: 32768,
         recipient_unread_max_bytes: 262144,
         mailbox_poll_interval_ms: 3000,

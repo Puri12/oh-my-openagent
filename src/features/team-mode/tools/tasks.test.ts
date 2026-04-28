@@ -64,7 +64,6 @@ function createConfig(): TeamModeConfig {
     max_messages_per_run: 10_000,
     max_wall_clock_minutes: 120,
     max_member_turns: 500,
-    member_delegate_task_budget: 1,
     message_payload_max_bytes: 32_768,
     recipient_unread_max_bytes: 262_144,
     mailbox_poll_interval_ms: 3_000,

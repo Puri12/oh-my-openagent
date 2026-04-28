@@ -6,7 +6,6 @@ import type { RuntimeState } from "../../features/team-mode/types"
 import {
   listActiveTeams,
   loadRuntimeState,
-  transitionRuntimeState,
 } from "../../features/team-mode/team-state-store"
 
 const ACTIVE_RUNTIME_STATUSES = new Set<RuntimeState["status"]>(["creating", "active", "shutdown_requested"])
@@ -79,31 +78,6 @@ function isTargetMember(participant: TeamParticipant, teamRunId: string | undefi
     && participant.memberName === memberName
 }
 
-async function consumeMemberDelegateBudget(participant: Extract<TeamParticipant, { role: "member" }>, config: TeamModeConfig): Promise<void> {
-  if (config.member_delegate_task_budget === 0) {
-    throw new Error("member delegate-task budget exhausted")
-  }
-
-  await transitionRuntimeState(participant.teamRunId, (runtimeState) => ({
-    ...runtimeState,
-    members: runtimeState.members.map((member) => {
-      if (member.name !== participant.memberName) {
-        return member
-      }
-
-      const delegateTaskCallsUsed = member.delegateTaskCallsUsed ?? 0
-      if (delegateTaskCallsUsed >= config.member_delegate_task_budget) {
-        throw new Error("member delegate-task budget exhausted")
-      }
-
-      return {
-        ...member,
-        delegateTaskCallsUsed: delegateTaskCallsUsed + 1,
-      }
-    }),
-  }), config)
-}
-
 export function createTeamToolGating(_ctx: PluginInput, config: TeamModeConfig | undefined): Hooks {
   return {
     "tool.execute.before": async (
@@ -122,10 +96,6 @@ export function createTeamToolGating(_ctx: PluginInput, config: TeamModeConfig |
       const participant = await resolveParticipant(input.sessionID, config)
 
       if (toolName === "delegate-task") {
-        if (participant.role === "member") {
-          await consumeMemberDelegateBudget(participant, config)
-        }
-
         return
       }
 
