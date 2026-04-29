@@ -26,7 +26,7 @@ export async function executeBackgroundAgent(
 		const parentAgent =
 			toolContext.agent ?? sessionAgent ?? firstMessageAgent ?? prevMessage?.agent
 
-		log("[call-omo-agent] parentAgent resolution", {
+		log("[callomoagent] parentAgent resolution", {
 			sessionID: toolContext.sessionID,
 			messageDir,
 			ctxAgent: toolContext.agent,

@@ -110,12 +110,12 @@ describe("createToolExecuteAfterHandler background launch detection", () => {
     })
   }
 
-  describe("#given a call-omo-agent background launch result", () => {
+  describe("#given a callomoagent background launch result", () => {
     describe("#when tool.execute.after handles it", () => {
       it("#then it should treat the launch as still running", async () => {
         const handler = createHandler()
         const output = {
-          title: "call-omo-agent",
+          title: "callomoagent",
           output: "Background agent task launched successfully.",
           metadata: {
             sessionId: "ses_child123",
@@ -124,7 +124,7 @@ describe("createToolExecuteAfterHandler background launch detection", () => {
 
         await handler(
           {
-            tool: "call-omo-agent",
+            tool: "callomoagent",
             sessionID: "ses_parent",
           },
           output,

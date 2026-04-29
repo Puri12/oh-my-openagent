@@ -399,11 +399,11 @@ describe("prometheus-md-only", () => {
       expect(output.args.prompt).toContain(SYSTEM_DIRECTIVE_PREFIX)
     })
 
-    test("should inject planning warning when Prometheus calls call-omo-agent", async () => {
+    test("should inject planning warning when Prometheus calls callomoagent", async () => {
       // given
       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
       const input = {
-        tool: "call-omo-agent",
+        tool: "callomoagent",
         sessionID: TEST_SESSION_ID,
         callID: "call-1",
       }

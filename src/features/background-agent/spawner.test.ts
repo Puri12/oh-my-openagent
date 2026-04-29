@@ -79,7 +79,7 @@ describe("background-agent spawner agent-not-found fallback", () => {
     // Tool restrictions recomputed for fallback agent (general has no restrictions)
     expect(promptCalls[1].body.tools).toEqual({
       task: false,
-      "call-omo-agent": true,
+      "callomoagent": true,
       question: false,
     })
     // Task agent identity updated to reflect fallback

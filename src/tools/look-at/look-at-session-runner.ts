@@ -67,7 +67,7 @@ Original error: ${createResult.error}`
         agent: MULTIMODAL_LOOKER_AGENT,
         tools: {
           task: false,
-          "call-omo-agent": false,
+          "callomoagent": false,
           look_at: false,
           read: READ_ENABLED,
         },

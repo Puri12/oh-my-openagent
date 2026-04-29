@@ -150,16 +150,16 @@ describe("category-skill-reminder hook", () => {
       clearSessionAgent(sessionID)
     })
 
-    test("should NOT inject reminder if call-omo-agent is used", async () => {
-      // given - sisyphus agent that uses call-omo-agent
+    test("should NOT inject reminder if callomoagent is used", async () => {
+      // given - sisyphus agent that uses callomoagent
       const hook = createHook()
       const sessionID = "omo-agent-session"
       updateSessionAgent(sessionID, "Sisyphus")
 
       const output = { title: "", output: "result", metadata: {} }
 
-      // when - call-omo-agent is used first
-      await hook["tool.execute.after"]({ tool: "call-omo-agent", sessionID, callID: "1" }, output)
+      // when - callomoagent is used first
+      await hook["tool.execute.after"]({ tool: "callomoagent", sessionID, callID: "1" }, output)
       await hook["tool.execute.after"]({ tool: "edit", sessionID, callID: "2" }, output)
       await hook["tool.execute.after"]({ tool: "edit", sessionID, callID: "3" }, output)
       await hook["tool.execute.after"]({ tool: "edit", sessionID, callID: "4" }, output)

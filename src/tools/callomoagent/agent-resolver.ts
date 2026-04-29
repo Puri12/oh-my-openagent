@@ -56,7 +56,7 @@ export async function resolveCallableAgents(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log(
-      "[call-omo-agent] Failed to resolve dynamic agents, falling back to built-in list",
+      "[callomoagent] Failed to resolve dynamic agents, falling back to built-in list",
       { error: message },
     );
     return [...ALLOWED_AGENTS];

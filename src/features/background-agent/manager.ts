@@ -612,7 +612,7 @@ export class BackgroundManager {
       tools: (() => {
         const tools = {
           task: false,
-          "call-omo-agent": true,
+          "callomoagent": true,
           question: false,
           ...getAgentToolRestrictions(input.agent),
         }
@@ -933,7 +933,7 @@ export class BackgroundManager {
         tools: (() => {
           const tools = {
             task: false,
-            "call-omo-agent": true,
+            "callomoagent": true,
             question: false,
             ...getAgentToolRestrictions(existingTask.agent),
           }

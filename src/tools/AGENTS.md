@@ -29,7 +29,7 @@
 
 | Tool | Factory | Parameters |
 |------|---------|------------|
-| `call-omo-agent` | `createCallOmoAgent` | description, prompt, subagent_type, run_in_background, session_id |
+| `callomoagent` | `createCallOmoAgent` | description, prompt, subagent_type, run_in_background, session_id |
 
 ### Background Tasks (2)
 

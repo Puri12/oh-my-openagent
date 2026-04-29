@@ -13,7 +13,7 @@ export async function waitForCompletion(
   },
   ctx: PluginInput
 ): Promise<void> {
-  log(`[call-omo-agent] Polling for completion...`)
+  log(`[callomoagent] Polling for completion...`)
 
   const POLL_INTERVAL_MS = 500
   const MAX_POLL_TIME_MS = 5 * 60 * 1000 // 5 minutes max
@@ -24,7 +24,7 @@ export async function waitForCompletion(
 
   while (Date.now() - pollStart < MAX_POLL_TIME_MS) {
     if (toolContext.abort?.aborted) {
-      log(`[call-omo-agent] Aborted by user`)
+      log(`[callomoagent] Aborted by user`)
       throw new Error("Task aborted.")
     }
 
@@ -49,7 +49,7 @@ export async function waitForCompletion(
     if (currentMsgCount > 0 && currentMsgCount === lastMsgCount) {
       stablePolls++
       if (stablePolls >= STABILITY_REQUIRED) {
-        log(`[call-omo-agent] Session complete, ${currentMsgCount} messages`)
+        log(`[callomoagent] Session complete, ${currentMsgCount} messages`)
         break
       }
     } else {
@@ -59,7 +59,7 @@ export async function waitForCompletion(
   }
 
   if (Date.now() - pollStart >= MAX_POLL_TIME_MS) {
-    log(`[call-omo-agent] Timeout reached`)
+    log(`[callomoagent] Timeout reached`)
     throw new Error("Agent task timed out after 5 minutes.")
   }
 }

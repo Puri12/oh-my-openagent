@@ -1,6 +1,6 @@
 import { extractTaskLink } from "../../features/tool-metadata-store"
 
-const TARGET_TOOLS = ["task", "Task", "task_tool", "call-omo-agent"]
+const TARGET_TOOLS = ["task", "Task", "task_tool", "callomoagent"]
 
 export function createTaskResumeInfoHook() {
   const toolExecuteAfter = async (

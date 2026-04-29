@@ -26,11 +26,11 @@ Agent factories following `createXXXAgent(model) → AgentConfig` pattern. Each 
 
 | Agent | Denied Tools |
 |-------|-------------|
-| Oracle | write, edit, task, call-omo-agent |
-| Librarian | write, edit, task, call-omo-agent |
-| Explore | write, edit, task, call-omo-agent |
+| Oracle | write, edit, task, callomoagent |
+| Librarian | write, edit, task, callomoagent |
+| Explore | write, edit, task, callomoagent |
 | Multimodal-Looker | ALL except read |
-| Atlas | task, call-omo-agent |
+| Atlas | task, callomoagent |
 | Momus | write, edit, task |
 
 ## STRUCTURE

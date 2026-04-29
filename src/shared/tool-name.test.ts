@@ -119,7 +119,7 @@ describe("transformToolName", () => {
 
     it("converts kebab-case to PascalCase", () => {
       // given
-      const toolName = "call-omo-agent"
+      const toolName = "callomoagent"
 
       // when
       const result = transformToolName(toolName)

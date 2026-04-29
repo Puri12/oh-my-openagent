@@ -72,7 +72,7 @@ export function applyToolConfig(params: {
     atlas.permission = {
       ...atlas.permission,
       task: "allow",
-      "call-omo-agent": "deny",
+      "callomoagent": "deny",
       "task_*": "allow",
       teammate: "allow",
       ...denyTodoTools,
@@ -82,7 +82,7 @@ export function applyToolConfig(params: {
   if (sisyphus) {
     sisyphus.permission = {
       ...sisyphus.permission,
-      "call-omo-agent": "deny",
+      "callomoagent": "deny",
       task: "allow",
       question: questionPermission,
       "task_*": "allow",
@@ -94,7 +94,7 @@ export function applyToolConfig(params: {
   if (hephaestus) {
     hephaestus.permission = {
       ...hephaestus.permission,
-      "call-omo-agent": "deny",
+      "callomoagent": "deny",
       task: "allow",
       question: questionPermission,
       teammate: "allow",
@@ -105,7 +105,7 @@ export function applyToolConfig(params: {
   if (prometheus) {
     prometheus.permission = {
       ...prometheus.permission,
-      "call-omo-agent": "deny",
+      "callomoagent": "deny",
       task: "allow",
       question: questionPermission,
       "task_*": "allow",

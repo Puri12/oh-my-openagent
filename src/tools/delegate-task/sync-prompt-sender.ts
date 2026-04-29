@@ -70,7 +70,7 @@ export async function sendSyncPrompt(
   const effectivePrompt = buildTaskPrompt(input.args.prompt, input.agentToUse, tddEnabled)
   const tools = {
     task: allowTask,
-    "call-omo-agent": true,
+    "callomoagent": true,
     question: false,
     ...getAgentToolRestrictions(input.agentToUse),
   }

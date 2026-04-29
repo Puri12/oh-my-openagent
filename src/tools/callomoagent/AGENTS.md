@@ -1,14 +1,14 @@
-# src/tools/call-omo-agent/ — Direct Agent Invocation Tool
+# src/tools/callomoagent/ — Direct Agent Invocation Tool
 
 **Generated:** 2026-04-11
 
 ## OVERVIEW
 
-23 files. The `call-omo-agent` tool — direct invocation of named agents (explore, librarian only). Distinct from `delegate-task`: no category system, no skill loading, no model selection. Fixed agent set, same execution modes (background/sync).
+23 files. The `callomoagent` tool — direct invocation of named agents (explore, librarian only). Distinct from `delegate-task`: no category system, no skill loading, no model selection. Fixed agent set, same execution modes (background/sync).
 
 ## DISTINCTION FROM delegate-task
 
-| Aspect | `call-omo-agent` | `delegate-task` (`task`) |
+| Aspect | `callomoagent` | `delegate-task` (`task`) |
 |--------|-----------------|--------------------------|
 | Agent selection | Named agent (explore/librarian) | Category or subagent_type |
 | Skill loading | None | `load_skills[]` supported |

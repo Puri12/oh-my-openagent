@@ -510,7 +510,7 @@ export function createSisyphusAgent(
       color: "#00CED1",
       permission: {
         question: "allow",
-        "call-omo-agent": "deny",
+        "callomoagent": "deny",
         ...getFrontierToolSchemaPermission(model),
         ...getGptApplyPatchPermission(model),
       } as AgentConfig["permission"],
@@ -537,7 +537,7 @@ export function createSisyphusAgent(
       color: "#00CED1",
       permission: {
         question: "allow",
-        "call-omo-agent": "deny",
+        "callomoagent": "deny",
         ...getFrontierToolSchemaPermission(model),
         ...getGptApplyPatchPermission(model),
       } as AgentConfig["permission"],
@@ -564,7 +564,7 @@ export function createSisyphusAgent(
       color: "#00CED1",
       permission: {
         question: "allow",
-        "call-omo-agent": "deny",
+        "callomoagent": "deny",
         ...getFrontierToolSchemaPermission(model),
         ...getGptApplyPatchPermission(model),
       } as AgentConfig["permission"],
@@ -591,7 +591,7 @@ export function createSisyphusAgent(
       color: "#00CED1",
       permission: {
         question: "allow",
-        "call-omo-agent": "deny",
+        "callomoagent": "deny",
         ...getFrontierToolSchemaPermission(model),
         ...getGptApplyPatchPermission(model),
       } as AgentConfig["permission"],
@@ -632,7 +632,7 @@ export function createSisyphusAgent(
 
   const permission = {
     question: "allow",
-    "call-omo-agent": "deny",
+    "callomoagent": "deny",
     ...getFrontierToolSchemaPermission(model),
     ...getGptApplyPatchPermission(model),
   } as AgentConfig["permission"];

@@ -3,7 +3,7 @@
  *
  * Hephaestus-style prompt adapted for a focused executor:
  * - Same autonomy, reporting, parallelism, and tool usage patterns
- * - CAN spawn explore/librarian via call-omo-agent for research
+ * - CAN spawn explore/librarian via callomoagent for research
  */
 
 import { resolvePromptAppend } from "../builtin-agents/resolve-file-uri"
@@ -42,7 +42,7 @@ When blocked: try a different approach → decompose the problem → challenge a
 - Run verification (lint, tests, build) WITHOUT asking
 - Make decisions. Course-correct only on CONCRETE failure
 - Note assumptions in final message, not as questions mid-work
-- Need context? Fire explore/librarian via call-omo-agent IMMEDIATELY - continue only with non-overlapping work while they search
+- Need context? Fire explore/librarian via callomoagent IMMEDIATELY - continue only with non-overlapping work while they search
 
 ## Scope Discipline
 
@@ -60,7 +60,7 @@ When blocked: try a different approach → decompose the problem → challenge a
 
 <tool_usage_rules>
 - Parallelize independent tool calls: multiple file reads, grep searches, agent fires - all at once
-- Explore/Librarian via call-omo-agent = background research. Fire them and continue only with non-overlapping work
+- Explore/Librarian via callomoagent = background research. Fire them and continue only with non-overlapping work
 - After any file edit: restate what changed, where, and what validation follows
 - Prefer tools over guessing whenever you need specific data (files, configs, patterns)
 - ALWAYS use tools over internal knowledge for file contents, project state, and verification
