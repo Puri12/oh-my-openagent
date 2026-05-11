@@ -6215,6 +6215,42 @@
       ],
       "additionalProperties": false
     },
+    "mempalace": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "project_wing": {
+          "type": "string"
+        },
+        "default_room": {
+          "type": "string"
+        },
+        "agent_name": {
+          "type": "string"
+        },
+        "auto_search_on_start": {
+          "type": "boolean"
+        },
+        "use_knowledge_graph": {
+          "type": "boolean"
+        },
+        "use_aaak_format": {
+          "type": "boolean"
+        },
+        "room_mappings": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "_migrations": {
       "type": "array",
       "items": {

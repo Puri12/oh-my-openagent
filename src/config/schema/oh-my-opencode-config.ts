@@ -25,6 +25,7 @@ import { SisyphusAgentConfigSchema } from "./sisyphus-agent"
 import { TmuxConfigSchema } from "./tmux"
 import { StartWorkConfigSchema } from "./start-work"
 import { WebsearchConfigSchema } from "./websearch"
+import { MempalaceConfigSchema } from "./mempalace"
 
 export const OhMyOpenCodeConfigSchema = z.object({
   $schema: z.string().optional(),
@@ -81,6 +82,7 @@ export const OhMyOpenCodeConfigSchema = z.object({
   tmux: TmuxConfigSchema.optional(),
   sisyphus: SisyphusConfigSchema.optional(),
   start_work: StartWorkConfigSchema.optional(),
+  mempalace: MempalaceConfigSchema.optional(),
   /** Migration history to prevent re-applying migrations (e.g., model version upgrades) */
   _migrations: z.array(z.string()).optional(),
 })

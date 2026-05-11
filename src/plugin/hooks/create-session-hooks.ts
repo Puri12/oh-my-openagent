@@ -28,6 +28,7 @@ import {
   createPreemptiveCompactionHook,
   createRuntimeFallbackHook,
   createLegacyPluginToastHook,
+  createMempalaceContextHook,
 } from "../../hooks"
 import { createAnthropicEffortHook } from "../../hooks/anthropic-effort"
 import {
@@ -65,6 +66,7 @@ export type SessionHooks = {
   anthropicEffort: ReturnType<typeof createAnthropicEffortHook> | null
   runtimeFallback: ReturnType<typeof createRuntimeFallbackHook> | null
   legacyPluginToast: ReturnType<typeof createLegacyPluginToastHook> | null
+  mempalaceContext: ReturnType<typeof createMempalaceContextHook> | null
 }
 
 export function createSessionHooks(args: {
@@ -276,6 +278,11 @@ export function createSessionHooks(args: {
     ? safeHook("legacy-plugin-toast", () => createLegacyPluginToastHook(ctx))
     : null
 
+  const mempalaceContext = isHookEnabled("mempalace-context")
+    ? safeHook("mempalace-context", () =>
+        createMempalaceContextHook(ctx.directory, pluginConfig.mempalace))
+    : null
+
   return {
     contextWindowMonitor,
     preemptiveCompaction,
@@ -301,5 +308,6 @@ export function createSessionHooks(args: {
     anthropicEffort,
     runtimeFallback,
     legacyPluginToast,
+    mempalaceContext,
   }
 }

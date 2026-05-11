@@ -57,6 +57,7 @@ export const HookNameSchema = z.enum([
   "webfetch-redirect-guard",
   "fsync-skip-warning",
   "legacy-plugin-toast",
+  "mempalace-context",
 ])
 
 export type HookName = z.infer<typeof HookNameSchema>
