@@ -57,16 +57,16 @@ describe("Atlas prompts anti-duplication coverage", () => {
 
 describe("Atlas prompts plan path consistency", () => {
   for (const [name, prompt] of ALL_VARIANTS) {
-    test(`${name} variant should use .sisyphus/plans/{plan-name}.md path`, () => {
-      expect(prompt).toContain(".sisyphus/plans/{plan-name}.md")
-      expect(prompt).not.toContain(".sisyphus/tasks/{plan-name}.yaml")
-      expect(prompt).not.toContain(".sisyphus/tasks/")
+    test(`${name} variant should use .omo/plans/{plan-name}.md path`, () => {
+      expect(prompt).toContain(".omo/plans/{plan-name}.md")
+      expect(prompt).not.toContain(".omo/tasks/{plan-name}.yaml")
+      expect(prompt).not.toContain(".omo/tasks/")
     })
   }
 
   test("all variants should read plan file after verification", () => {
     for (const [, prompt] of ALL_VARIANTS) {
-      expect(prompt).toMatch(/read[\s\S]*?\.sisyphus\/plans\//i)
+      expect(prompt).toMatch(/read[\s\S]*?\.omo\/plans\//i)
     }
   })
 
@@ -124,6 +124,13 @@ describe("Atlas prompts use task_id (not session_id) for retries", () => {
   test("all variants should mention task_id for retries", () => {
     for (const [name, prompt] of ALL_VARIANTS) {
       expect(prompt, `${name}: missing task_id retry reference`).toMatch(/task_id/)
+    }
+  })
+
+  test("all variants should separate background ids from continuation task ids", () => {
+    for (const [name, prompt] of ALL_VARIANTS) {
+      expect(prompt, `${name}: missing bg result collection contract`).toContain('background_output(task_id="bg_...")')
+      expect(prompt, `${name}: missing ses continuation contract`).toContain('task(task_id="ses_..."')
     }
   })
 })

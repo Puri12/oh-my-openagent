@@ -367,7 +367,7 @@ Agent 会自动顺藤摸瓜加载对应的 Context，免去了你所有的手动
 - **Sisyphus Agent**: 主调度器，搭配 Prometheus（规划师）和 Metis（计划顾问）
 - **后台任务**: 按 provider/model 配置并发上限
 - **类别**: 按领域的任务委托（`visual`、`business-logic`、自定义）
-- **Hooks**: 25+ 内置 Hook，都可以通过 `disabled_hooks` 控制
+- **Hooks**: 54+ 内置生命周期 Hook（启用 Team Mode 时为 61 个），都可以通过 `disabled_hooks` 控制
 - **MCPs**: 内置 websearch（Exa）、context7（文档）、grep_app（GitHub 检索）
 - **LSP**: 包括重构工具的完整 LSP 支持
 - **Experimental**: 激进截断、自动 resume 等
@@ -418,5 +418,6 @@ Agent 会自动顺藤摸瓜加载对应的 Context，免去了你所有的手动
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - 开发了 elepay（全渠道移动支付网关）、OneQR（专为无现金社会打造的移动 SaaS 生态系统）。
+- [Deepgram](https://deepgram.com)
 
 *特别感谢 [@junhoyeo](https://github.com/junhoyeo) 为我们设计的令人惊艳的首图（Hero Image）。*

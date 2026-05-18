@@ -368,7 +368,7 @@ oh-my-openagent를 제거하려면:
 - **Sisyphus Agent**: Prometheus(플래너), Metis(플랜 컨설턴트)와 함께 도는 메인 오케스트레이터
 - **Background Tasks**: 프로바이더/모델별 동시성 제한 설정
 - **Categories**: 도메인별 태스크 위임(`visual`, `business-logic`, 커스텀)
-- **Hooks**: 25개 이상의 빌트인 hook, `disabled_hooks`로 전부 제어 가능
+- **Hooks**: 54개 이상의 라이프사이클 hook (Team Mode 활성화 시 61개), 전부 `disabled_hooks`로 제어 가능
 - **MCPs**: 빌트인 websearch(Exa), context7(문서), grep_app(GitHub 검색)
 - **LSP**: 리팩터링 도구까지 포함한 풀 LSP 지원
 - **Experimental**: 공격적 truncation, 자동 재개 등
@@ -419,5 +419,6 @@ OpenCode가 Debian/Arch라면, oh-my-openagent는 Ubuntu/[Omarchy](https://omarc
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - elepay(멀티 모바일 결제 게이트웨이), OneQR(캐시리스 솔루션용 모바일 앱 SaaS) 개발사.
+- [Deepgram](https://deepgram.com)
 
 *훌륭한 hero 이미지를 만들어준 [@junhoyeo](https://github.com/junhoyeo)에게 특별히 감사드립니다.*

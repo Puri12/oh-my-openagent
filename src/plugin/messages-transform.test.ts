@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test"
 
 import { createMessagesTransformHandler } from "./messages-transform"
 import { createToolPairValidatorHook } from "../hooks/tool-pair-validator/hook"
+import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import type { CreatedHooks } from "../create-hooks"
 
 type TestPart = {
@@ -14,6 +15,7 @@ type TestPart = {
   content?: string
   text?: string
   synthetic?: boolean
+  metadata?: { compaction_continue?: boolean }
 }
 
 type TestMessage = {
@@ -139,12 +141,20 @@ describe("createMessagesTransformHandler", () => {
     expect(messages).toHaveLength(5)
     expect(messages[2]).toEqual({
       info: { role: "user" },
-      parts: [{ type: "tool_result", tool_use_id: "toolu_01SRMQs3DUtVKWoSxC8bxxVA", content: "Tool output unavailable (context compacted)" }],
+      parts: [{
+        type: "tool_result",
+        toolUseId: "toolu_01SRMQs3DUtVKWoSxC8bxxVA",
+        tool_use_id: "toolu_01SRMQs3DUtVKWoSxC8bxxVA",
+        isError: true,
+        content: [{ type: "text", text: "Tool output unavailable (context compacted)" }],
+      }],
     })
     expect(messages[4]?.parts[0]).toEqual({
       type: "tool_result",
+      toolUseId: "toolu_01Lu5cHvRtEvzoifP1UVBVRb",
       tool_use_id: "toolu_01Lu5cHvRtEvzoifP1UVBVRb",
-      content: "Tool output unavailable (context compacted)",
+      isError: true,
+      content: [{ type: "text", text: "Tool output unavailable (context compacted)" }],
     })
     expect(messages[4]?.parts[1]).toEqual({ type: "text", text: "next" })
   })
@@ -161,10 +171,34 @@ describe("createMessagesTransformHandler", () => {
     await runHandler(hooks, [])
   })
 
-  it("appends a synthetic user turn when transformed messages end with assistant prefill", async () => {
+  it("#given a completed assistant response tail #when messages transform runs again #then it does not synthesize a continuation user turn", async () => {
     //#given
     const messages: TestMessage[] = [
       { info: { role: "user" }, parts: [{ type: "text", text: "work on this" }] },
+      { info: { role: "assistant" }, parts: [{ type: "text", text: "completed assistant answer" }] },
+    ]
+
+    //#when
+    await runHandler(makeHooks({}), messages)
+
+    //#then
+    expect(messages).toHaveLength(2)
+    expect(messages.at(-1)?.info.role).toBe("assistant")
+  })
+
+  it("#given an internal compaction continuation reaches an assistant prefill tail #when messages transform runs #then it appends a synthetic user recovery turn", async () => {
+    //#given
+    const messages: TestMessage[] = [
+      { info: { role: "user" }, parts: [{ type: "text", text: "work on this" }] },
+      {
+        info: { role: "user" },
+        parts: [{
+          type: "text",
+          text: `[session recovered - continuing previous task]\n${OMO_INTERNAL_INITIATOR_MARKER}`,
+          synthetic: true,
+          metadata: { compaction_continue: true },
+        }],
+      },
       { info: { role: "assistant" }, parts: [{ type: "text", text: "partial assistant tail" }] },
     ]
 

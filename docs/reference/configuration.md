@@ -77,7 +77,7 @@ Here's a practical starting configuration:
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
 
   "agents": {
-    // Main orchestrator: Claude Opus or Kimi K2.5 work best
+    // Main orchestrator: Claude Opus or Kimi K2.6 work best
     "sisyphus": {
       "model": "kimi-for-coding/k2p5",
       "ultrawork": { "model": "anthropic/claude-opus-4-7", "variant": "max" },
@@ -451,7 +451,7 @@ The `sisyphus.tasks` section configures **storage options** only:
 {
   "sisyphus": {
     "tasks": {
-      "storage_path": ".sisyphus/tasks",
+      "storage_path": ".omo/tasks",
       "claude_code_compat": false
     }
   }
@@ -460,7 +460,7 @@ The `sisyphus.tasks` section configures **storage options** only:
 
 | Option               | Default           | Description                                |
 | -------------------- | ----------------- | ------------------------------------------ |
-| `storage_path`       | `.sisyphus/tasks` | Storage path (relative to project root)    |
+| `storage_path`       | `.omo/tasks` | Storage path (relative to project root)    |
 | `task_list_id`       | -                 | Force task list ID (alternative to env `ULTRAWORK_TASK_LIST_ID`) |
 | `claude_code_compat` | `false`           | Enable Claude Code path compatibility mode |
 

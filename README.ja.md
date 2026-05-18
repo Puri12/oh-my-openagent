@@ -367,7 +367,7 @@ oh-my-openagent を削除するには:
 - **Sisyphus エージェント**: Prometheus (プランナー) と Metis (プランコンサルタント) を伴うメインオーケストレーター
 - **バックグラウンドタスク**: プロバイダー/モデル別の同時実行数を設定
 - **カテゴリー**: ドメイン別のタスク委任 (`visual`、`business-logic`、カスタム)
-- **フック**: 25 以上の組み込みフック。すべて `disabled_hooks` で制御可能
+- **フック**: 54 以上の組み込みライフサイクルフック（Team Mode 有効時は 61）。すべて `disabled_hooks` で制御可能
 - **MCP**: 組み込み websearch (Exa)、context7 (ドキュメント)、grep_app (GitHub 検索)
 - **LSP**: リファクタリングツールまで含む完全な LSP サポート
 - **Experimental**: 積極的な truncation、自動 resume など
@@ -418,5 +418,6 @@ OpenCode が Debian/Arch だとすれば、oh-my-openagent は Ubuntu/[Omarchy](
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - マルチモバイル決済ゲートウェイ elepay、キャッシュレスソリューション向けモバイルアプリケーション SaaS OneQR の開発元。
+- [Deepgram](https://deepgram.com)
 
 *素晴らしいヒーロー画像を提供してくれた [@junhoyeo](https://github.com/junhoyeo) 氏に特別な感謝を。*

@@ -1,5 +1,10 @@
 # Dependencies
-.sisyphus/
+.omo/*
+!.omo/rules/
+!.omo/rules/**
+.sisyphus/*
+!.sisyphus/rules/
+!.sisyphus/rules/**
 node_modules/
 
 # Build output
@@ -43,3 +48,4 @@ oauth-success.html
 # Debugging / session artifacts (skill workspace residue)
 .debug-journal*.md
 session-ses_*.md
+plans/

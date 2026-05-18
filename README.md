@@ -368,7 +368,7 @@ See [Configuration Documentation](docs/reference/configuration.md).
 - **Sisyphus Agent**: Main orchestrator with Prometheus (Planner) and Metis (Plan Consultant)
 - **Background Tasks**: Configure concurrency limits per provider/model
 - **Categories**: Domain-specific task delegation (`visual`, `business-logic`, custom)
-- **Hooks**: 25+ built-in hooks, all configurable via `disabled_hooks`
+- **Hooks**: 54+ lifecycle hooks (61 with Team Mode), all configurable via `disabled_hooks`
 - **MCPs**: Built-in websearch (Exa), context7 (docs), grep_app (GitHub search)
 - **LSP**: Full LSP support with refactoring tools
 - **Experimental**: Aggressive truncation, auto-resume, and more
@@ -419,5 +419,6 @@ No affiliation with any project or model mentioned. Just personal experimentatio
 - [Vercel](https://vercel.com)
 - [ELESTYLE](https://elestyle.jp)
   - Makers of elepay (multi-mobile payment gateway) and OneQR (mobile application SaaS for cashless solutions).
+- [Deepgram](https://deepgram.com)
 
 *Special thanks to [@junhoyeo](https://github.com/junhoyeo) for this amazing hero image.*

@@ -19,9 +19,10 @@ import { collectGitDiffStats, formatFileChanges } from "../../shared/git-worktre
 import { shouldPauseForFinalWaveApproval } from "./final-wave-approval-gate"
 import { HOOK_NAME } from "./hook-name"
 import { DIRECT_WORK_REMINDER } from "./system-reminder-templates"
-import { isSisyphusPath } from "./sisyphus-path"
+import { isOmoPath } from "./omo-path"
 import { resolvePreferredSessionId, resolveTaskContext } from "./task-context"
 import { extractSessionIdFromMetadata, extractSessionIdFromOutput, validateSubagentSessionId } from "./subagent-session-id"
+import { didToolMakeProgress, isTangibleProgressTool, recordToolProgress } from "./tool-progress"
 import {
   buildCompletionGate,
   buildFinalWaveApprovalReminder,
@@ -129,13 +130,21 @@ export function createToolExecuteAfterHandler(input: {
   autoCommit: boolean
   getState: (sessionID: string) => SessionState
   isCallerOrchestrator?: (sessionID: string | undefined) => Promise<boolean>
+  collectGitDiffStats?: typeof collectGitDiffStats
+  formatFileChanges?: typeof formatFileChanges
 }): (toolInput: ToolExecuteAfterInput, toolOutput: ToolExecuteAfterOutput | undefined) => Promise<void> {
   const { ctx, pendingFilePaths, pendingTaskRefs, pendingPlanSnapshots, autoCommit, getState } = input
   const resolveIsCallerOrchestrator = input.isCallerOrchestrator ?? ((sessionID) => isCallerOrchestrator(sessionID, ctx.client))
+  const collectGitDiffStatsImpl = input.collectGitDiffStats ?? collectGitDiffStats
+  const formatFileChangesImpl = input.formatFileChanges ?? formatFileChanges
   return async (toolInput, toolOutput): Promise<void> => {
     // Guard against undefined output (e.g., from /review command - see issue #1035)
     if (!toolOutput) {
       return
+    }
+
+    if (toolInput.sessionID && isTangibleProgressTool(toolInput.tool) && didToolMakeProgress(toolOutput)) {
+      recordToolProgress(getState(toolInput.sessionID))
     }
 
     if (!(await resolveIsCallerOrchestrator(toolInput.sessionID))) {
@@ -171,7 +180,7 @@ export function createToolExecuteAfterHandler(input: {
         }
       }
 
-      if (filePath && !isSisyphusPath(filePath)) {
+      if (filePath && !isOmoPath(filePath)) {
         toolOutput.output = (toolOutput.output || "") + DIRECT_WORK_REMINDER
         log(`[${HOOK_NAME}] Direct work reminder appended`, {
           sessionID: toolInput.sessionID,
@@ -212,8 +221,8 @@ export function createToolExecuteAfterHandler(input: {
     if (toolOutput.output && typeof toolOutput.output === "string") {
       const worktreePath = boulderState?.worktree_path?.trim()
       const verificationDirectory = worktreePath ? worktreePath : ctx.directory
-      const gitStats = collectGitDiffStats(verificationDirectory)
-      const fileChanges = formatFileChanges(gitStats)
+      const gitStats = collectGitDiffStatsImpl(verificationDirectory)
+      const fileChanges = formatFileChangesImpl(gitStats)
       const extractedSessionId = metadataSessionId ?? extractSessionIdFromOutput(toolOutput.output)
 
       if (boulderState) {

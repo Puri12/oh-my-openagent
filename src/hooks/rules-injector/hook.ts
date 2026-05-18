@@ -1,8 +1,9 @@
 import type { PluginInput } from "@opencode-ai/plugin";
 import { createDynamicTruncator } from "../../shared/dynamic-truncator";
+import { resolveSessionEventID } from "../../shared/event-session-id";
 import { getRuleInjectionFilePath } from "./output-path";
 import { createSessionCacheStore, createSessionRuleScanCacheStore } from "./cache";
-import { createRuleInjectionProcessor } from "./injector";
+import { clearParsedRuleCache, createRuleInjectionProcessor } from "./injector";
 import { clearProjectRootCache } from "./project-root-finder";
 
 interface ToolExecuteInput {
@@ -52,6 +53,7 @@ export function createRulesInjectorHook(
   function clearSessionState(sessionID: string): void {
     clearSessionCache(sessionID);
     clearSessionRuleScanCache(sessionID);
+    clearParsedRuleCache();
   }
 
   const toolExecuteAfter = async (
@@ -80,16 +82,15 @@ export function createRulesInjectorHook(
     const props = event.properties as Record<string, unknown> | undefined;
 
     if (event.type === "session.deleted") {
-      const sessionInfo = props?.info as { id?: string } | undefined;
-      if (sessionInfo?.id) {
-        clearSessionState(sessionInfo.id);
+      const sessionID = resolveSessionEventID(props);
+      if (sessionID) {
+        clearSessionState(sessionID);
       }
       clearProjectRootCache();
     }
 
     if (event.type === "session.compacted") {
-      const sessionID = (props?.sessionID ??
-        (props?.info as { id?: string } | undefined)?.id) as string | undefined;
+      const sessionID = resolveSessionEventID(props);
       if (sessionID) {
         clearSessionState(sessionID);
       }

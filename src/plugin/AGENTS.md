@@ -1,6 +1,6 @@
 # src/plugin/ — 10 OpenCode Hook Handlers + Hook Composition
 
-**Generated:** 2026-05-08
+**Generated:** 2026-05-15
 
 ## OVERVIEW
 
@@ -27,10 +27,10 @@ Core glue layer. Files assemble the 10 OpenCode hook handlers and compose the 5-
 | File | Tier | Count |
 |------|------|-------|
 | `create-session-hooks.ts` | Session | 24 |
-| `create-tool-guard-hooks.ts` | Tool Guard | 14 |
+| `create-tool-guard-hooks.ts` | Tool Guard | 16 |
 | `create-transform-hooks.ts` | Transform | 5 |
 | `create-skill-hooks.ts` | Skill | 2 |
-| `create-core-hooks.ts` | Aggregator | Session + Guard + Transform = 43 |
+| `create-core-hooks.ts` | Aggregator | Session + Guard + Transform = 45 |
 
 `createContinuationHooks()` (7) lives in `src/create-hooks.ts` next to `createCoreHooks()` and `createSkillHooks()`.
 
@@ -60,7 +60,6 @@ const lookAt = isMultimodalLookerEnabled ? { look_at: createLookAt(ctx) } : {}
 const interactiveBashTool = interactiveBashEnabled ? { interactive_bash } : {}
 
 const allTools = {
-  ...builtinTools,                    // 6 LSP
   ...createGrepTools(ctx),
   ...createGlobTools(ctx),
   ...createAstGrepTools(ctx),
@@ -74,6 +73,8 @@ const allTools = {
   ...taskToolsRecord,                 // +4 conditional
   ...hashlineToolsRecord,             // +1 conditional
 }
+
+// lsp_* tools are now supplied by built-in MCP server "lsp"
 ```
 
 ## KEY PATTERNS
