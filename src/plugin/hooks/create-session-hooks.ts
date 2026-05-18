@@ -29,6 +29,7 @@ import {
   createRuntimeFallbackHook,
   createLegacyPluginToastHook,
   createMempalaceContextHook,
+  createCompactionSafetyHook,
 } from "../../hooks"
 import { createAnthropicEffortHook } from "../../hooks/anthropic-effort"
 import {
@@ -67,6 +68,7 @@ export type SessionHooks = {
   runtimeFallback: ReturnType<typeof createRuntimeFallbackHook> | null
   legacyPluginToast: ReturnType<typeof createLegacyPluginToastHook> | null
   mempalaceContext: ReturnType<typeof createMempalaceContextHook> | null
+  compactionSafety: ReturnType<typeof createCompactionSafetyHook> | null
 }
 
 export function createSessionHooks(args: {
@@ -283,6 +285,10 @@ export function createSessionHooks(args: {
         createMempalaceContextHook(ctx.directory, pluginConfig.mempalace))
     : null
 
+  const compactionSafety = isHookEnabled("compaction-safety")
+    ? safeHook("compaction-safety", () => createCompactionSafetyHook())
+    : null
+
   return {
     contextWindowMonitor,
     preemptiveCompaction,
@@ -309,5 +315,6 @@ export function createSessionHooks(args: {
     runtimeFallback,
     legacyPluginToast,
     mempalaceContext,
+    compactionSafety,
   }
 }
