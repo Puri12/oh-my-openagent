@@ -83,7 +83,6 @@ function isChatParamsOutput(raw: unknown): raw is ChatParamsOutput {
 
 export function createChatParamsHandler(args: {
   anthropicEffort: { "chat.params"?: (input: ChatParamsHookInput, output: ChatParamsOutput) => Promise<void> } | null
-  compactionSafety?: { "chat.params"?: (input: ChatParamsHookInput, output: ChatParamsOutput) => Promise<void> } | null
   client?: unknown
 }): (input: unknown, output: unknown) => Promise<void> {
   return async (input, output): Promise<void> => {
@@ -192,6 +191,5 @@ export function createChatParamsHandler(args: {
     }
 
     await args.anthropicEffort?.["chat.params"]?.(normalizedInput, output)
-    await args.compactionSafety?.["chat.params"]?.(normalizedInput, output)
   }
 }
