@@ -4,6 +4,7 @@ import type { ModelCacheState } from "../plugin-state";
 import { log } from "../shared";
 import { applyAgentConfig } from "./agent-config-handler";
 import { applyCommandConfig } from "./command-config-handler";
+import { applyHookConfig } from "./hook-config-handler";
 import { applyMcpConfig } from "./mcp-config-handler";
 import { applyProviderConfig } from "./provider-config-handler";
 import { loadPluginComponents } from "./plugin-components-loader";
@@ -30,6 +31,8 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
 
     const pluginComponents = await loadPluginComponents({ pluginConfig });
 
+    applyHookConfig({ pluginComponents, ctx });
+
     const agentResult = await applyAgentConfig({
       config,
       pluginConfig,
@@ -38,7 +41,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
     });
 
     applyToolConfig({ config, pluginConfig, agentResult });
-    await applyMcpConfig({ config, pluginConfig, pluginComponents });
+    await applyMcpConfig({ config, pluginConfig, ctx, pluginComponents });
     await applyCommandConfig({ config, pluginConfig, ctx, pluginComponents });
 
     config.formatter = formatterConfig;

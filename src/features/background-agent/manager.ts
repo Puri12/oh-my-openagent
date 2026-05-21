@@ -3,11 +3,15 @@ import type { PluginInput } from "@opencode-ai/plugin"
 import type { BackgroundTaskConfig, TmuxConfig } from "../../config/schema"
 import { setContinuationMarkerSource } from "../../features/run-continuation-state"
 import type { ModelFallbackControllerAccessor } from "../../hooks/model-fallback"
-import { dispatchInternalPrompt, type PromptAsyncGateResult } from "../../hooks/shared/prompt-async-gate"
+import {
+  dispatchInternalPrompt,
+  type PromptAsyncGateResult,
+} from "../../hooks/shared/prompt-async-gate"
 import { isSessionActive as isOpenCodeSessionActive } from "../../hooks/shared/session-idle-settle"
 import {
   createInternalAgentTextPart,
   getAgentToolRestrictions,
+  isAmbiguousPostDispatchPromptFailure,
   log,
   messagesInDirectory,
   normalizePromptTools,
@@ -138,6 +142,7 @@ const PARENT_WAKE_TOOL_CALL_DEFER_MAX_MS = 5_000
  * env. See issue #4120.
  */
 const PARENT_WAKE_USER_MESSAGE_IN_PROGRESS_WINDOW_MS = 2_000
+const PARENT_WAKE_SESSION_ACTIVITY_IN_PROGRESS_WINDOW_MS = 2_000
 
 interface MessagePartInfo {
   id?: string
@@ -305,6 +310,7 @@ export class BackgroundManager {
         toolCallDeferMaxMs: PARENT_WAKE_TOOL_CALL_DEFER_MAX_MS,
         failureRequeueWindowMs: PARENT_WAKE_FAILURE_REQUEUE_WINDOW_MS,
         userMessageInProgressWindowMs: PARENT_WAKE_USER_MESSAGE_IN_PROGRESS_WINDOW_MS,
+        parentSessionActivityInProgressWindowMs: PARENT_WAKE_SESSION_ACTIVITY_IN_PROGRESS_WINDOW_MS,
       },
     )
     this.registerProcessCleanup()
@@ -485,7 +491,7 @@ export class BackgroundManager {
   private restoreTaskAfterSkippedResume(
     task: BackgroundTask,
     snapshot: ResumeTaskSnapshot,
-    skippedStatus: Exclude<PromptAsyncGateResult["status"], "dispatched" | "failed">,
+    skippedStatus: Exclude<PromptAsyncGateResult["status"], "dispatched" | "queued" | "failed">,
   ): void {
     log("[background-agent] Restoring task after skipped resume prompt:", {
       taskId: task.id,
@@ -1306,6 +1312,7 @@ The fallback retry session is now created and can be inspected directly.
       sessionID: existingTask.sessionId,
       source: "background-agent-resume",
       settleMs: 0,
+      queueBehavior: "defer",
       input: {
         path: { id: existingTask.sessionId },
         body: {
@@ -1330,7 +1337,23 @@ The fallback retry session is now created and can be inspected directly.
       },
     }).then((promptResult) => {
       if (promptResult.status === "failed") {
+        if (isAmbiguousPostDispatchPromptFailure(promptResult)) {
+          log("[background-agent] resume prompt may have been accepted before ambiguous failure; continuing to poll", {
+            taskId: existingTask.id,
+            sessionID: existingTask.sessionId,
+            error: promptResult.error instanceof Error ? promptResult.error.message : String(promptResult.error),
+          })
+          return
+        }
         throw promptResult.error
+      }
+      if (promptResult.status === "queued") {
+        log("[background-agent] resume prompt queued by prompt dispatcher:", {
+          taskId: existingTask.id,
+          sessionID: existingTask.sessionId,
+          queuedBy: promptResult.queuedBy,
+        })
+        return
       }
       if (promptResult.status !== "dispatched") {
         log("[background-agent] resume prompt skipped by promptAsync gate:", {
@@ -1458,6 +1481,7 @@ The fallback retry session is now created and can be inspected directly.
       const role = (info as Record<string, unknown>)["role"]
       if (!sessionID) return
       this.clearDispatchedParentWake(sessionID)
+      this.parentWakeNotifier.recordParentSessionActivity(sessionID)
 
       if (role === "tool") {
         this.markSessionOutputObserved(sessionID)
@@ -1492,6 +1516,7 @@ The fallback retry session is now created and can be inspected directly.
       const sessionID = resolveMessageEventSessionID(props)
       if (!sessionID) return
       this.clearDispatchedParentWake(sessionID)
+      this.parentWakeNotifier.recordParentSessionActivity(sessionID)
 
       const resolved = this.resolveTaskAttemptBySession(sessionID)
       if (!resolved?.isCurrent) return
@@ -2132,7 +2157,7 @@ The task was re-queued on a fallback model after a retryable failure.
         SessionCategoryRegistry.remove(task.sessionId)
       }
       log("[background-agent] Removed completed task from memory:", taskId)
-    }, TASK_CLEANUP_DELAY_MS)
+    }, this.config?.taskCleanupDelayMs ?? TASK_CLEANUP_DELAY_MS)
 
     this.completionTimers.set(taskId, timer)
   }

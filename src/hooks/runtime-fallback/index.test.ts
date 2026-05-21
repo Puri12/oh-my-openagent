@@ -8,6 +8,10 @@ import {
 } from "../../shared/delegated-child-session-bootstrap"
 import * as loggerModule from "../../shared/logger"
 import { SessionCategoryRegistry } from "../../shared/session-category-registry"
+import {
+  releaseAllPromptAsyncReservationsForTesting,
+  releasePromptAsyncReservation,
+} from "../shared/prompt-async-gate"
 import type { RuntimeFallbackPluginInput } from "./types"
 
 type RuntimeFallbackModule = typeof import("./hook")
@@ -23,6 +27,7 @@ describe("runtime-fallback", () => {
     toastCalls = []
     SessionCategoryRegistry.clear()
     clearAllDelegatedChildSessionBootstrap()
+    releaseAllPromptAsyncReservationsForTesting()
 
     const cacheBuster = `${Date.now()}-${Math.random()}`
 
@@ -40,6 +45,7 @@ describe("runtime-fallback", () => {
   afterEach(() => {
     SessionCategoryRegistry.clear()
     clearAllDelegatedChildSessionBootstrap()
+    releaseAllPromptAsyncReservationsForTesting()
     mock.restore()
   })
 
@@ -374,6 +380,9 @@ describe("runtime-fallback", () => {
           type: "session.error",
           properties: {
             sessionID,
+            // model at the top level so the awaiting-fallback gate recognises this
+            // as an error from the fallback model we just dispatched
+            model: "anthropic/claude-opus-4.7",
             error: { name: "UnknownError", data: { message: "Model not found: anthropic/claude-opus-4.7." } },
           },
         },
@@ -426,6 +435,9 @@ describe("runtime-fallback", () => {
           type: "session.error",
           properties: {
             sessionID,
+            // model at the top level so the awaiting-fallback gate recognises this
+            // as an error from the fallback model we just dispatched
+            model: "anthropic/claude-opus-4.7",
             error: {
               name: "ProviderModelNotFoundError",
               data: {
@@ -1348,6 +1360,71 @@ describe("runtime-fallback", () => {
       expect(fallbackLogs).toHaveLength(1)
 
       void sessionErrorPromise
+    })
+
+    test("#given promptAsync fails after fallback retry may have been accepted #when the gate hold expires and the same error repeats #then the pending fallback state prevents a duplicate retry prompt", async () => {
+      // given
+      let promptCalls = 0
+      const hook = createRuntimeFallbackHook(
+        createMockPluginInput({
+          session: {
+            messages: async () => ({
+              data: [{ info: { role: "user" }, parts: [{ type: "text", text: "hello" }] }],
+            }),
+            promptAsync: async () => {
+              promptCalls += 1
+              throw new Error("JSON Parse error: Unexpected EOF")
+            },
+          },
+        }),
+        {
+          config: createMockConfig({ notify_on_fallback: false }),
+          pluginConfig: createMockPluginConfigWithCategoryFallback([
+            "provider-a/model-a",
+            "provider-b/model-b",
+          ]),
+        }
+      )
+      const sessionID = "test-runtime-fallback-eof-preserves-pending"
+      SessionCategoryRegistry.register(sessionID, "test")
+
+      await hook.event({
+        event: {
+          type: "session.created",
+          properties: { info: { id: sessionID, model: "google/gemini-2.5-pro" } },
+        },
+      })
+
+      // when
+      await hook.event({
+        event: {
+          type: "session.error",
+          properties: {
+            sessionID,
+            model: "google/gemini-2.5-pro",
+            error: { statusCode: 429, message: "Rate limit" },
+          },
+        },
+      })
+      const released = releasePromptAsyncReservation(sessionID, "test:simulate-expired-hold", {
+        reservedBy: "runtime-fallback:session.error",
+      })
+      await hook.event({
+        event: {
+          type: "session.error",
+          properties: {
+            sessionID,
+            model: "google/gemini-2.5-pro",
+            error: { statusCode: 429, message: "Rate limit" },
+          },
+        },
+      })
+
+      // then
+      expect(released).toBe(true)
+      expect(promptCalls).toBe(1)
+      const skipLog = logCalls.find((call) => call.msg.includes("session.error skipped - awaiting fallback result"))
+      expect(skipLog).toBeDefined()
     })
 
     test("should force advance fallback from message.updated when Copilot auto-retry signal appears during in-flight retry", async () => {
@@ -2693,11 +2770,15 @@ describe("runtime-fallback", () => {
         },
       })
 
+      // Simulate the fallback session completing before the next error arrives
+      await hook.event({ event: { type: "session.idle", properties: { sessionID } } })
+
       //#when - second error occurs immediately; tries to switch back to original model but should be in cooldown
       await hook.event({
         event: {
           type: "session.error",
-          properties: { sessionID, error: { statusCode: 429 } },
+          // model matches pendingFallbackModel so the awaiting-fallback gate lets this through
+          properties: { sessionID, model: "openai/gpt-5.4", error: { statusCode: 429 } },
         },
       })
 
@@ -2917,6 +2998,80 @@ describe("runtime-fallback", () => {
       expect(skipLog).toBeDefined()
     })
 
+    test("#given a dispatched fallback retry #when stale original assistant error arrives before duplicate session.error #then only one assistant retry prompt is sent", async () => {
+      const promptCalls: Array<unknown> = []
+
+      const hook = createRuntimeFallbackHook(
+        createMockPluginInput({
+          session: {
+            messages: async () => ({
+              data: [{ info: { role: "user" }, parts: [{ type: "text", text: "hello" }] }],
+            }),
+            promptAsync: async (args: unknown) => {
+              promptCalls.push(args)
+              return {}
+            },
+          },
+        }),
+        {
+          config: createMockConfig({ notify_on_fallback: false }),
+          pluginConfig: {
+            git_master: {
+              commit_footer: true,
+              include_co_authored_by: true,
+              git_env_prefix: "GIT_MASTER=1",
+            },
+            categories: {
+              test: {
+                fallback_models: ["provider-a/model-a", "provider-b/model-b"],
+              },
+            },
+          },
+        }
+      )
+      const sessionID = "test-race-stale-message-update-before-error"
+      SessionCategoryRegistry.register(sessionID, "test")
+
+      await hook.event({
+        event: {
+          type: "session.created",
+          properties: { info: { id: sessionID, model: "google/gemini-2.5-pro" } },
+        },
+      })
+
+      await hook.event({
+        event: {
+          type: "session.error",
+          properties: { sessionID, model: "google/gemini-2.5-pro", error: { statusCode: 429, message: "Rate limit" } },
+        },
+      })
+      await hook.event({
+        event: {
+          type: "message.updated",
+          properties: {
+            info: {
+              sessionID,
+              role: "assistant",
+              model: "google/gemini-2.5-pro",
+              error: { statusCode: 429, message: "Rate limit" },
+            },
+          },
+        },
+      })
+      await hook.event({
+        event: {
+          type: "session.error",
+          properties: { sessionID, model: "google/gemini-2.5-pro", error: { statusCode: 429, message: "Rate limit" } },
+        },
+      })
+
+      expect(promptCalls).toHaveLength(1)
+      const fallbackLogs = logCalls.filter((call) => call.msg.includes("Preparing fallback"))
+      expect(fallbackLogs).toHaveLength(1)
+      const skipLog = logCalls.find((call) => call.msg.includes("session.error skipped - awaiting fallback result"))
+      expect(skipLog).toBeDefined()
+    })
+
     test("session.stop aborts when sessionAwaitingFallbackResult is set", async () => {
       const abortCalls: Array<{ path?: { id?: string } }> = []
 
@@ -3013,14 +3168,21 @@ describe("runtime-fallback", () => {
         },
       })
 
-      const autoRetryLog = logCalls.find((call) => call.msg.includes("No user message found for auto-retry"))
+      const autoRetryLog = logCalls.find((call) =>
+        call.msg.includes("No user message parts found for auto-retry") &&
+        call.msg.includes("using synthetic continuation"),
+      )
       expect(autoRetryLog).toBeDefined()
+
+      // Simulate the fallback session completing before the next error arrives
+      await hook.event({ event: { type: "session.idle", properties: { sessionID } } })
 
       //#when - second error fires after retry completed (retryInFlight cleared)
       await hook.event({
         event: {
           type: "session.error",
-          properties: { sessionID, error: { statusCode: 429, message: "Rate limit again" } },
+          // model matches pendingFallbackModel so the awaiting-fallback gate lets this through
+          properties: { sessionID, model: "provider-a/model-a", error: { statusCode: 429, message: "Rate limit again" } },
         },
       })
 

@@ -5744,6 +5744,10 @@
           "type": "number",
           "minimum": 10000
         },
+        "taskCleanupDelayMs": {
+          "type": "number",
+          "minimum": 60000
+        },
         "syncPollTimeoutMs": {
           "type": "number",
           "minimum": 60000
@@ -5946,6 +5950,15 @@
       ],
       "additionalProperties": false
     },
+    "i18n": {
+      "type": "object",
+      "properties": {
+        "locale": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "team_mode": {
       "type": "object",
       "properties": {
@@ -6026,6 +6039,20 @@
     "keyword_detector": {
       "type": "object",
       "properties": {
+        "enabled_expansions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ultrawork",
+              "search",
+              "analyze",
+              "team",
+              "hyperplan",
+              "hyperplan-ultrawork"
+            ]
+          }
+        },
         "disabled_keywords": {
           "type": "array",
           "items": {
