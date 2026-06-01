@@ -9,11 +9,11 @@ Most users want **Ultimate**. Pick **Light** if you are already invested in Code
 
 | You want | Run | Lands on disk |
 | :--- | :--- | :--- |
-| Ultimate (OpenCode) | `bunx omo install` (TUI walks you through it) | Plugin registered in `opencode.json`, agent/model config, provider auth |
-| Light (Codex CLI) | `bunx omo install --platform=codex` or `bunx lazycodex install` | `~/.codex/plugins/cache/sisyphuslabs/omo/`, stable Codex marketplace snapshot, `~/.codex/config.toml` marketplace/plugin/agent blocks, optional autonomous Codex permissions, component CLIs in `~/.local/bin` |
-| Both | `bunx omo install --platform=both` | Both of the above |
+| Ultimate (OpenCode) | `bunx oh-my-openagent install` (TUI walks you through it) | Plugin registered in `opencode.json`, agent/model config, provider auth |
+| Light (Codex CLI) | `npx lazycodex-ai install` | `~/.codex/plugins/cache/sisyphuslabs/omo/`, stable Codex marketplace snapshot, `~/.codex/config.toml` marketplace/plugin/agent blocks, optional autonomous Codex permissions, component CLIs in `~/.local/bin` |
+| Both | `bunx oh-my-openagent install --platform=both` | Both of the above |
 
-`--platform` defaults to `opencode` (Ultimate). The `bunx lazycodex install` alias is a shortcut for `bunx omo install --platform=codex`: same compiled CLI, different default. `lazycodex` is a repo/npm/bin alias, not the Codex marketplace name.
+`lazycodex-ai` defaults to the Codex Light installer and runs through Node/npm. `--platform` on the shared `omo` CLI still defaults to `opencode` (Ultimate). `lazycodex-ai` is the npm/bin alias; `lazycodex` is the GitHub repository that hosts the marketplace bundle. Neither is the Codex marketplace name.
 
 ## For Humans
 
@@ -33,18 +33,38 @@ https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/refs/heads/dev/do
 The Light edition installer asks whether to configure Codex for autonomous full-permissions mode. This is recommended for agent-style use: `approval_policy = "never"`, `sandbox_mode = "danger-full-access"`, `network_access = "enabled"`, and notice warnings hidden. Use `--codex-autonomous` or `--no-codex-autonomous` to choose non-interactively:
 
 ```bash
-bunx omo install --platform=codex
-# equivalent:
-bunx lazycodex install
+npx lazycodex-ai install
 # non-interactive recommended mode:
-bunx lazycodex install --no-tui --codex-autonomous
+npx lazycodex-ai install --no-tui --codex-autonomous
 ```
 
-It writes only to `~/.codex/`. No OpenCode interaction, no provider flags. Codex config will register marketplace `sisyphuslabs` from the local built cache under `~/.codex/plugins/cache/sisyphuslabs` and enable plugin `omo@sisyphuslabs`.
+It writes managed Codex Light state to `~/.codex/` and does not touch OpenCode or provider flags. During oh-my-codex / omx migration it may also repair the current project's `.codex/config.toml` if that project has the known `multi_agent_v2` plus legacy `[agents] max_threads` conflict; project-owned `.codex` / `.omx` artifacts are reported, not deleted. Global Codex config will register marketplace `sisyphuslabs` from the local built cache under `~/.codex/plugins/cache/sisyphuslabs` and enable plugin `omo@sisyphuslabs`.
+
+On native Windows Codex installs, the installer prepares Git Bash before writing Codex config. If Git Bash is missing and `winget` is available, it tries the same best-effort command shown here, then checks again:
+
+```powershell
+winget install --id Git.Git -e --source winget
+where bash
+```
+
+If Git is installed somewhere custom, set the path before rerunning the installer:
+
+```cmd
+setx OMO_CODEX_GIT_BASH_PATH "C:\Program Files\Git\bin\bash.exe"
+```
+
+```powershell
+$env:OMO_CODEX_GIT_BASH_PATH = "C:\Program Files\Git\bin\bash.exe"
+```
+
+Set `OMO_CODEX_SKIP_GIT_BASH_AUTO_INSTALL=1` before running the installer if you want to skip the best-effort `winget install --id Git.Git -e --source winget` attempt and handle Git Bash manually.
+
+Codex may still start Windows shell calls through its own defaults. The Light edition does not write a global Codex shell config; instead it verifies Git Bash is available, enables the Windows-only `git_bash` MCP policy, and injects guidance before the first shell-like call. After compaction, the reminder resets so the next shell-like call gets the same `git_bash` recommendation.
 
 > **Clean install note for oh-my-codex / omx users.** Before installing the Light edition into a Codex home that previously used [`oh-my-codex`](https://github.com/Yeachan-Heo/oh-my-codex), uninstall it first with `omx uninstall`, then re-run this installer. Both projects write Codex marketplace plugins, lifecycle hooks, and the `ultrawork`/`ulw` keyword into the same `~/.codex`, so a clean Codex home avoids stale shared `config.toml` keys and duplicate hooks.
 >
-> If the uninstall command is unavailable, remove the old Codex plugin/cache entries it created under `~/.codex/`, then run `bunx omo install --platform=codex` again.
+> If the old uninstall command is unavailable, run `npx lazycodex-ai cleanup` after migration. It removes managed `sisyphuslabs` Codex cache/marketplace state, strips `omo@sisyphuslabs` plugin and hook-state blocks from `~/.codex/config.toml` with a backup, and removes agent TOML links listed in the install manifest.
+> If Codex still fails only inside one project with `agents.max_threads cannot be set when multi_agent_v2 is enabled`, run `npx lazycodex-ai install` from that project. The installer repairs project-local `.codex/config.toml` layers from the project root to the current directory, removes conflicting legacy `[agents] max_threads` only when MultiAgentV2 is enabled, and writes timestamped backups next to changed files.
 
 ### A note on direct install
 
@@ -175,6 +195,25 @@ fi
 
 The installer expects `~/.codex/` to be writable. Codex CLI's first run creates this directory; if it does not exist yet, install Codex CLI and run it once before continuing.
 
+On native Windows Codex installs, Git Bash is also prepared:
+
+```powershell
+winget install --id Git.Git -e --source winget
+where bash
+```
+
+For a custom Git Bash location, set `OMO_CODEX_GIT_BASH_PATH`:
+
+```cmd
+setx OMO_CODEX_GIT_BASH_PATH "C:\Program Files\Git\bin\bash.exe"
+```
+
+```powershell
+$env:OMO_CODEX_GIT_BASH_PATH = "C:\Program Files\Git\bin\bash.exe"
+```
+
+Set `OMO_CODEX_SKIP_GIT_BASH_AUTO_INSTALL=1` to disable the best-effort `winget install --id Git.Git -e --source winget` attempt.
+
 ### Step 2: Run the installer
 
 Run with the platform flag and the subscription flags you collected in Step 0:
@@ -206,9 +245,7 @@ bunx oh-my-openagent install \
   ```
 - Codex only with recommended autonomous permissions:
   ```bash
-  bunx oh-my-openagent install --no-tui --platform=codex --codex-autonomous
-  # equivalent:
-  bunx lazycodex install --no-tui --codex-autonomous
+  npx lazycodex-ai install --no-tui --codex-autonomous
   ```
 - Both harnesses with Claude only:
   ```bash
@@ -223,14 +260,14 @@ bunx oh-my-openagent install \
   bunx oh-my-openagent install --no-tui --platform=opencode --claude=no --openai=no --gemini=no --copilot=no --opencode-go=yes
   ```
 
-**About the `lazycodex` bin name.** `lazycodex` is an alias for the same compiled CLI and the Git repository that hosts the marketplace bundle. The only CLI difference is that `lazycodex install` defaults `--platform=codex` instead of `opencode`. You can still pass `--platform=both` to override. The Codex marketplace name is `sisyphuslabs`, and the plugin name is `omo`.
+**About the `lazycodex-ai` bin name.** `lazycodex-ai` is the npm package and bin alias for the Codex Light Node installer. `lazycodex` (without the `-ai` suffix) is the GitHub repository that hosts the marketplace bundle. `lazycodex-ai install` does not require Bun. The Codex marketplace name is `sisyphuslabs`, and the plugin name is `omo`.
 
 **What the installer does:**
 
 | Platform | Writes |
 |----------|--------|
 | `opencode`, `both` | Registers `"oh-my-openagent"` in `opencode.json` `plugin` array. Generates agent → model mappings into `~/.config/opencode/oh-my-openagent.jsonc`. |
-| `codex`, `both` | Copies `packages/omo-codex/plugin/` into `~/.codex/plugins/cache/sisyphuslabs/omo/<version>/`. Runs `npm install` + `npm run build` inside. Writes a local installed-marketplace snapshot under `~/.codex/.tmp/marketplaces/sisyphuslabs/` so bundled agent TOMLs survive cache version pruning. Symlinks component CLIs into `~/.local/bin` (or `$CODEX_LOCAL_BIN_DIR`). Computes SHA256 trusted-hashes for every hook and writes `[marketplaces.sisyphuslabs]` with local source `~/.codex/plugins/cache/sisyphuslabs`, `[plugins."omo@sisyphuslabs"]`, managed `[agents.*]`, and `[hooks.state."omo@sisyphuslabs:..."]` blocks into `~/.codex/config.toml`. If `--codex-autonomous` is selected, also writes `approval_policy = "never"`, `sandbox_mode = "danger-full-access"`, `network_access = "enabled"`, and the matching `[notice]` warning suppressions. |
+| `codex`, `both` | Copies `packages/omo-codex/plugin/` into `~/.codex/plugins/cache/sisyphuslabs/omo/<version>/`. Packaged `lazycodex-ai` installs use bundled component artifacts and run `npm install --omit=dev` in the cache; source checkout installs may build the plugin first. Writes a local installed-marketplace snapshot under `~/.codex/.tmp/marketplaces/sisyphuslabs/` so bundled agent TOMLs survive cache version pruning. Symlinks component CLIs into `~/.local/bin` (or `$CODEX_LOCAL_BIN_DIR`). Computes SHA256 trusted-hashes for every hook and writes `[marketplaces.sisyphuslabs]` with local source `~/.codex/plugins/cache/sisyphuslabs`, `[plugins."omo@sisyphuslabs"]`, managed `[agents.*]`, and `[hooks.state."omo@sisyphuslabs:..."]` blocks into `~/.codex/config.toml`. If `--codex-autonomous` is selected, also writes `approval_policy = "never"`, `sandbox_mode = "danger-full-access"`, `network_access = "enabled"`, and the matching `[notice]` warning suppressions. |
 
 Both halves are independent and idempotent — re-running is safe.
 
@@ -267,9 +304,12 @@ ls ~/.local/bin/ | grep -E '^(omo|omo-(comment-checker|lsp|rules|start-work-cont
 
 # Codex CLI sees the plugin?
 codex --help
+
+# On native Windows, Git Bash is discoverable?
+where bash
 ```
 
-If any of these come back empty, re-run `bunx omo install --platform=codex` — the installer is idempotent and will recompute hook trust hashes.
+If any of these come back empty, re-run `npx lazycodex-ai install` — the installer is idempotent and will recompute hook trust hashes.
 
 ### Step 4: Configure authentication
 
@@ -575,7 +615,7 @@ Skip this section if `--platform=opencode`. Otherwise, the user installed the **
 
 - **Plugin cache:** `~/.codex/plugins/cache/sisyphuslabs/omo/<version>/`
 - **Codex marketplace snapshot:** `~/.codex/.tmp/marketplaces/sisyphuslabs/` (stable local copy used by bundled agent TOML links)
-- **Component binaries:** `~/.local/bin/omo`, `omo-comment-checker`, `omo-lsp`, `omo-rules`, `omo-start-work-continuation`, `omo-telemetry`, `omo-ultrawork` (or the same names under `$CODEX_LOCAL_BIN_DIR` if set)
+- **Component binaries:** `~/.local/bin/omo`, `omo-comment-checker`, `omo-git-bash-hook`, `omo-lsp`, `omo-rules`, `omo-start-work-continuation`, `omo-telemetry`, `omo-ultrawork` (or the same names under `$CODEX_LOCAL_BIN_DIR` if set)
 - **Codex agent roles:** `~/.codex/agents/{codex-ultrawork-reviewer,explorer,librarian,metis,momus,plan}.toml` linked or copied from the stable marketplace snapshot, so they keep resolving when Codex prunes old plugin-cache versions
 - **Codex config edits:** `~/.codex/config.toml` gained `[features] plugins = true`, `[features] plugin_hooks = true`, `[marketplaces.sisyphuslabs]` pointing at `~/.codex/plugins/cache/sisyphuslabs`, `[plugins."omo@sisyphuslabs"]`, SHA256-pinned `[hooks.state."omo@sisyphuslabs:..."]` entries, and optionally autonomous permission settings if accepted
 
@@ -585,6 +625,7 @@ Skip this section if `--platform=opencode`. Otherwise, the user installed the **
 |-----------|----------|-------------|--------------|
 | `rules` | TypeScript | `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `PostCompact` | Injects `AGENTS.md`, `CLAUDE.md`, and `.omo/rules/**` into Codex's context |
 | `comment-checker` | TypeScript | `PostToolUse` (`apply_patch`, `edit`, `write`) | Blocks AI-slop comment patterns in generated code |
+| `git-bash` | TypeScript + MCP | `PreToolUse` (`Bash`), `PostCompact`, MCP server | On Windows, exposes `git_bash`; reminds Codex before the first shell-like call and again after compaction |
 | `lsp` | TypeScript + MCP | MCP server + post-edit hooks | Exposes LSP diagnostics, navigation, symbols, rename via MCP |
 | `ultrawork` | TypeScript | `UserPromptSubmit` keyword detector | Detects `ulw`/`ultrawork` keyword; the installer links bundled Codex agent TOMLs into `$CODEX_HOME/agents` |
 | `ulw-loop` | TypeScript | Durable orchestration via `.omo/ulw-loop/` | Multi-goal orchestration with evidence audit trail |
@@ -599,11 +640,12 @@ The Codex CLI Light edition is fully independent of the OpenCode plugin. You can
 
 | Symptom | Fix |
 |---------|-----|
-| `codex --help` does not list the omo plugin | Re-run `bunx omo install --platform=codex` (idempotent — hook hashes are recomputed) |
+| `codex --help` does not list the omo plugin | Re-run `npx lazycodex-ai install` (idempotent — hook hashes are recomputed) |
 | `command not found: omo-rules` or `command not found: omo` | Add `~/.local/bin` to `PATH`, or set `$CODEX_LOCAL_BIN_DIR` to a directory already on `PATH` |
 | `npm install` fails mid-install | `rm -rf ~/.codex/plugins/cache/sisyphuslabs` and retry |
 | Plugin block is present but hooks do not fire | Verify `~/.codex/config.toml` contains `[features]\nplugins = true\nplugin_hooks = true` and `[plugins."omo@sisyphuslabs"]` |
-| `Ignoring malformed agent role definition: agents.*.config_file must point to an existing file` | Re-run `bunx omo install --platform=codex` (or `bunx lazycodex install`). The installer repairs stale managed `[agents.*]` entries and recreates `~/.codex/agents/*.toml`. |
+| `Ignoring malformed agent role definition: agents.*.config_file must point to an existing file` | Re-run `npx lazycodex-ai install`. The installer repairs stale managed `[agents.*]` entries and recreates `~/.codex/agents/*.toml`. |
+| `agents.max_threads cannot be set when multi_agent_v2 is enabled` in one project | Re-run `npx lazycodex-ai install` from that project. The installer repairs project-local `.codex/config.toml` layers, creates `.backup-<timestamp>` files for changed configs, and leaves user-authored `.codex` / `.omx` artifacts in place. |
 | `SessionStart hook (failed)` / `UserPromptSubmit hook (failed)` with `MODULE_NOT_FOUND` for `components/*/dist/cli.js` | Re-run the installer so the cached plugin is rebuilt with component `dist/` files. If the cache was manually edited, remove `~/.codex/plugins/cache/sisyphuslabs` first. |
 | Hook trust hash mismatch warnings | Re-run the installer; hashes are regenerated each install |
 
@@ -695,7 +737,7 @@ Every agent, hook, skill, MCP, command, and tool is configurable via `disabled_*
 
 | Variable | Effect |
 |----------|--------|
-| `OMO_INVOCATION_NAME` | Overrides detected bin name (`oh-my-opencode`, `omo`, `lazycodex`, etc.). Used to route `lazycodex install` to `--platform=codex`. |
+| `OMO_INVOCATION_NAME` | Overrides detected bin name (`oh-my-opencode`, `omo`, `lazycodex-ai`, etc.). Used by shared wrapper packages to route `lazycodex-ai` invocations to the Node installer path. |
 | `OMO_DISABLE_POSTHOG=1` | Disables all PostHog telemetry for the main plugin |
 | `OMO_SEND_ANONYMOUS_TELEMETRY=0` | Same effect as above |
 | `OMO_CODEX_DISABLE_POSTHOG=1` | Disables PostHog telemetry for the Codex CLI Light edition only |
@@ -792,19 +834,14 @@ opencode --version
 ### Remove the Codex CLI Light edition
 
 ```bash
-# 1. Remove the plugin cache
-rm -rf ~/.codex/plugins/cache/sisyphuslabs
-
-# 2. Edit ~/.codex/config.toml and remove these blocks:
-#    [marketplaces.sisyphuslabs]
-#    [plugins."omo@sisyphuslabs"]
-#    [hooks.state."omo@sisyphuslabs"]
-
-# 3. Optional: remove the component symlinks
-rm -f ~/.local/bin/omo ~/.local/bin/omo-comment-checker ~/.local/bin/omo-lsp \
-      ~/.local/bin/omo-rules ~/.local/bin/omo-start-work-continuation \
-      ~/.local/bin/omo-telemetry ~/.local/bin/omo-ultrawork
+npx lazycodex-ai cleanup
+# or:
+omo cleanup --platform=codex
 ```
+
+The cleanup command removes the managed `~/.codex/plugins/cache/sisyphuslabs` and `~/.codex/.tmp/marketplaces/sisyphuslabs` trees, strips `sisyphuslabs` / legacy LazyCodex marketplace, plugin, hook-state, and managed agent blocks from `~/.codex/config.toml` after writing a timestamped backup, and removes agent TOML links listed in `.installed-agents.json`.
+
+If a workspace still has old `oh-my-codex` / `omx` project state, run `npx lazycodex-ai cleanup --project <path>` or run it from that workspace. The command repairs only the known project-local Codex config conflict and reports legacy `.codex` / `.omx` artifact paths; it does not delete project-owned files automatically.
 
 ## Operational notes
 

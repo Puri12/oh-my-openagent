@@ -105,8 +105,9 @@ function getInvocationName(wrapperPackageName) {
   if (process.env.OMO_INVOCATION_NAME) {
     return process.env.OMO_INVOCATION_NAME;
   }
-  if (getPackageBareName(wrapperPackageName) === "lazycodex") {
-    return "lazycodex";
+  const wrapperBareName = getPackageBareName(wrapperPackageName);
+  if (wrapperBareName === "lazycodex" || wrapperBareName === "lazycodex-ai") {
+    return wrapperBareName;
   }
   const argv1 = process.argv[1] ?? "";
   if (!argv1) {
@@ -166,7 +167,7 @@ function main() {
   for (let index = 0; index < resolvedBinaries.length; index += 1) {
     const currentBinary = resolvedBinaries[index];
     const hasFallback = index < resolvedBinaries.length - 1;
-    const result = spawnSync(currentBinary.binPath, process.argv.slice(2), {
+    const result = spawnSync(process.execPath, [currentBinary.binPath, ...process.argv.slice(2)], {
       stdio: "inherit",
       env: childEnv,
     });

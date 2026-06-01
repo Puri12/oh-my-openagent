@@ -15,7 +15,7 @@ afterEach(async () => {
 });
 
 describe("lazycodex bin wrapper", () => {
-  test("runs the platform binary so npx lazycodex does not require Bun", async () => {
+  test("runs the platform package launcher through Node", async () => {
     // #given
     const fixture = await createLazyCodexFixture();
     const nodePath = Bun.which("node") ?? "node";
@@ -34,6 +34,7 @@ describe("lazycodex bin wrapper", () => {
     expect(result.status).toBe(23);
     expect((await readFile(join(fixture.captureDir, "env"), "utf8")).trim()).toBe("lazycodex");
     expect(await canonicalizePackageRootCapture(fixture)).toBe(await realpath(fixture.root));
+    expect(await realpath((await readFile(join(fixture.captureDir, "exec-path"), "utf8")).trim())).toBe(await realpath(nodePath));
     expect((await readFile(join(fixture.captureDir, "args"), "utf8")).trim().split("\n")).toEqual([
       "install",
       "--no-tui",
@@ -58,6 +59,31 @@ describe("lazycodex bin wrapper", () => {
     // #then
     expect(result.status).toBe(23);
     expect((await readFile(join(fixture.captureDir, "env"), "utf8")).trim()).toBe("lazycodex");
+    expect(await canonicalizePackageRootCapture(fixture)).toBe(await realpath(fixture.root));
+    expect((await readFile(join(fixture.captureDir, "args"), "utf8")).trim().split("\n")).toEqual([
+      "install",
+      "--no-tui",
+    ]);
+  });
+
+  test("routes the lazycodex-ai package to the Codex installer via the oh-my-openagent platform family", async () => {
+    // #given
+    const fixture = await createLazyCodexFixture({ packageName: "lazycodex-ai", wrapperFileName: "lazycodex-ai" });
+    const nodePath = Bun.which("node") ?? "node";
+
+    // #when
+    const result = spawnSync(nodePath, [fixture.wrapperBin, "install", "--no-tui"], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CAPTURE_DIR: fixture.captureDir,
+        PATH: fixture.fakeBinDir,
+      },
+    });
+
+    // #then
+    expect(result.status).toBe(23);
+    expect((await readFile(join(fixture.captureDir, "env"), "utf8")).trim()).toBe("lazycodex-ai");
     expect(await canonicalizePackageRootCapture(fixture)).toBe(await realpath(fixture.root));
     expect((await readFile(join(fixture.captureDir, "args"), "utf8")).trim().split("\n")).toEqual([
       "install",
@@ -150,16 +176,18 @@ async function writePlatformPackages(root: string): Promise<void> {
     packageBaseName: "oh-my-openagent",
   });
   for (const packageName of packages) {
-    const binaryPath = join(root, "node_modules", packageName, "bin", process.platform === "win32" ? "oh-my-opencode.exe" : "oh-my-opencode");
+    const binaryPath = join(root, "node_modules", packageName, "bin", "oh-my-opencode.js");
     await mkdir(dirname(binaryPath), { recursive: true });
     await writeFile(
       binaryPath,
       [
-        "#!/bin/sh",
-        "printf '%s\\n' \"$OMO_INVOCATION_NAME\" > \"$CAPTURE_DIR/env\"",
-        "printf '%s\\n' \"$OMO_WRAPPER_PACKAGE_ROOT\" > \"$CAPTURE_DIR/wrapper-root\"",
-        "printf '%s\\n' \"$@\" > \"$CAPTURE_DIR/args\"",
-        "exit 23",
+        "#!/usr/bin/env node",
+        'import { writeFileSync } from "node:fs";',
+        'writeFileSync(`${process.env.CAPTURE_DIR}/env`, `${process.env.OMO_INVOCATION_NAME}\\n`);',
+        'writeFileSync(`${process.env.CAPTURE_DIR}/wrapper-root`, `${process.env.OMO_WRAPPER_PACKAGE_ROOT}\\n`);',
+        'writeFileSync(`${process.env.CAPTURE_DIR}/exec-path`, `${process.execPath}\\n`);',
+        'writeFileSync(`${process.env.CAPTURE_DIR}/args`, `${process.argv.slice(2).join("\\n")}\\n`);',
+        "process.exit(23);",
         "",
       ].join("\n"),
     );

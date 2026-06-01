@@ -5,7 +5,6 @@ import type { ModelCacheState } from "../../plugin-state"
 import type { PluginContext } from "../types"
 
 import {
-  createContextWindowMonitorHook,
   createSessionRecoveryHook,
   createSessionNotification,
   createThinkModeHook,
@@ -42,7 +41,6 @@ import { sessionExists } from "../../tools"
 import { isTmuxIntegrationEnabled } from "../../create-runtime-tmux-config"
 
 export type SessionHooks = {
-  contextWindowMonitor: ReturnType<typeof createContextWindowMonitorHook> | null
   preemptiveCompaction: ReturnType<typeof createPreemptiveCompactionHook> | null
   sessionRecovery: ReturnType<typeof createSessionRecoveryHook> | null
   sessionNotification: ReturnType<typeof createSessionNotification> | null
@@ -81,11 +79,6 @@ export function createSessionHooks(args: {
   const { ctx, pluginConfig, modelCacheState, backgroundManager, modelFallbackControllerAccessor, isHookEnabled, safeHookEnabled } = args
   const safeHook = <T>(hookName: HookName, factory: () => T): T | null =>
     safeCreateHook(hookName, factory, { enabled: safeHookEnabled })
-
-  const contextWindowMonitor = isHookEnabled("context-window-monitor")
-    ? safeHook("context-window-monitor", () =>
-        createContextWindowMonitorHook(ctx, modelCacheState))
-    : null
 
   const preemptiveCompaction =
     isHookEnabled("preemptive-compaction") &&
@@ -284,7 +277,6 @@ export function createSessionHooks(args: {
     : null
 
   return {
-    contextWindowMonitor,
     preemptiveCompaction,
     sessionRecovery,
     sessionNotification,

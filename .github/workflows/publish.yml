@@ -28,7 +28,7 @@ on:
         type: boolean
         default: false
       publish_lazycodex:
-        description: "Publish the lazycodex npm alias"
+        description: "Publish the lazycodex-ai npm alias"
         required: false
         type: boolean
         default: true
@@ -130,7 +130,7 @@ jobs:
           PLATFORMS=(darwin-arm64 darwin-x64 darwin-x64-baseline linux-x64 linux-x64-baseline linux-arm64 linux-x64-musl linux-x64-musl-baseline linux-arm64-musl windows-x64 windows-x64-baseline)
           ALL_PACKAGES=(oh-my-opencode oh-my-openagent)
           if [ "${PUBLISH_LAZYCODEX}" = "true" ]; then
-            ALL_PACKAGES+=(lazycodex)
+            ALL_PACKAGES+=(lazycodex-ai)
           fi
           for plat in "${PLATFORMS[@]}"; do
             ALL_PACKAGES+=("oh-my-opencode-${plat}")
@@ -309,16 +309,16 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check if lazycodex already published
+      - name: Check if lazycodex-ai already published
         id: check-lazycodex
         if: inputs.publish_lazycodex == true
         env:
           VERSION: ${{ needs.release-metadata.outputs.version }}
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/lazycodex/${VERSION}")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/lazycodex-ai/${VERSION}")
           if [ "$STATUS" = "200" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "✓ lazycodex@${VERSION} already published"
+            echo "✓ lazycodex-ai@${VERSION} already published"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -395,7 +395,7 @@ jobs:
           if [ -n "$DIST_TAG" ]; then
             npm publish --access public --provenance --tag "$DIST_TAG" --loglevel verbose
           else
-            npm publish --access public --provenance --loglevel verbose
+            npm publish --access public --provenance --tag latest --loglevel verbose
           fi
 
       - name: Restore package.json
@@ -403,7 +403,13 @@ jobs:
         run: |
           git checkout -- package.json
 
-      - name: Publish lazycodex
+      - name: Build Codex plugin components for lazycodex-ai
+        if: inputs.publish_lazycodex == true && steps.check-lazycodex.outputs.skip != 'true'
+        run: |
+          npm --prefix packages/omo-codex/plugin ci
+          bun run --cwd packages/omo-codex/plugin build
+
+      - name: Publish lazycodex-ai
         if: inputs.publish_lazycodex == true && steps.check-lazycodex.outputs.skip != 'true'
         env:
           OMO_VERSION: ${{ needs.release-metadata.outputs.version }}
@@ -411,13 +417,15 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
         run: |
           jq --arg omo_version "$OMO_VERSION" '
-            .name = "lazycodex" |
+            .name = "lazycodex-ai" |
             .version = $omo_version |
-            .optionalDependencies = (
-              .optionalDependencies | to_entries |
-              map(.key = (.key | sub("^oh-my-opencode-"; "oh-my-openagent-")) | .value = $omo_version) |
-              from_entries
-            )
+            .bin = { "lazycodex-ai": "packages/omo-codex/scripts/install-local.mjs", "lazycodex": "packages/omo-codex/scripts/install-local.mjs" } |
+            .files = ["packages/omo-codex/scripts", "packages/omo-codex/plugin", "packages/omo-codex/plugin/.codex-plugin", "packages/omo-codex/marketplace.json", "packages/lsp-tools-mcp/dist", "packages/ast-grep-mcp/dist", "packages/git-bash-mcp/dist", "packages/shared-skills"] |
+            .scripts = {} |
+            .dependencies = {} |
+            .devDependencies = {} |
+            .optionalDependencies = {} |
+            .peerDependencies = {}
           ' package.json > tmp.json && mv tmp.json package.json
 
           if [ -n "$DIST_TAG" ]; then
@@ -426,7 +434,50 @@ jobs:
             npm publish --access public --provenance --tag latest --loglevel verbose
           fi
 
-      - name: Restore package.json after lazycodex publish attempt
+      - name: Smoke test published lazycodex-ai
+        if: inputs.publish_lazycodex == true && steps.check-lazycodex.outputs.skip != 'true'
+        env:
+          OMO_VERSION: ${{ needs.release-metadata.outputs.version }}
+          DIST_TAG: ${{ needs.release-metadata.outputs.dist_tag }}
+        run: |
+          set -euo pipefail
+
+          smoke_lazycodex_package() {
+            package_spec="$1"
+            for attempt in $(seq 1 12); do
+              SMOKE_DIR=$(mktemp -d)
+              export HOME="$SMOKE_DIR/home"
+              export CODEX_HOME="$SMOKE_DIR/codex"
+              export CODEX_LOCAL_BIN_DIR="$SMOKE_DIR/bin"
+              mkdir -p "$HOME" "$CODEX_HOME" "$CODEX_LOCAL_BIN_DIR" "$SMOKE_DIR/cwd"
+              cd "$SMOKE_DIR/cwd"
+
+              if npx_install_output=$(npx -y "$package_spec" --dry-run install --no-tui --codex-autonomous 2>&1) &&
+                 npx_doctor_output=$(npx -y "$package_spec" --dry-run doctor 2>&1) &&
+                 [ "$npx_install_output" = "npx --yes --package oh-my-openagent omo install --platform=codex --no-tui --codex-autonomous" ] &&
+                 [ "$npx_doctor_output" = "npx --yes --package oh-my-openagent omo doctor" ]; then
+                echo "$npx_install_output"
+                echo "$npx_doctor_output"
+                cd "$GITHUB_WORKSPACE"
+                rm -rf "$SMOKE_DIR"
+                return 0
+              fi
+
+              cd "$GITHUB_WORKSPACE"
+              rm -rf "$SMOKE_DIR"
+              echo "Waiting for ${package_spec} registry propagation (attempt ${attempt}/12)"
+              sleep 10
+            done
+            echo "::error::Published LazyCodex smoke failed for ${package_spec}"
+            return 1
+          }
+
+          smoke_lazycodex_package "lazycodex-ai@${OMO_VERSION}"
+          if [ -z "$DIST_TAG" ]; then
+            smoke_lazycodex_package "lazycodex-ai@latest"
+          fi
+
+      - name: Restore package.json after lazycodex-ai publish attempt
         if: always() && inputs.publish_lazycodex == true && steps.check-lazycodex.outputs.skip != 'true'
         run: |
           git checkout -- package.json

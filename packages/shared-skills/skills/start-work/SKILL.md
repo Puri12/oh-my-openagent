@@ -20,6 +20,26 @@ This skill ports the OpenCode `/start-work` flow onto Codex. Any OpenCode-only t
 
 When translating `load_skills=[...]`, name the skills inside the spawned agent's `message`. If a code block below conflicts with this section, this section wins.
 
+## Codex Subagent Reliability
+
+Every `spawn_agent` message must be self-contained. Start with
+`TASK: <imperative assignment>`, then name `DELIVERABLE`, `SCOPE`, and
+`VERIFY`. State that it is an executable assignment, not a context
+handoff. Role selection requires `agent_type`; `model` +
+`reasoning_effort` alone creates a default agent, not a reviewer or
+worker. Prefer `fork_turns: "none"` unless full history is truly
+required; paste only the context the child needs.
+
+Plan and reviewer agents may run for a long time; spawn them in the background, keep doing independent root work, and poll with short wait_agent cycles. Never use a single long blocking wait for them.
+
+Use `wait_agent` for completion signals, but treat `wait_agent` as a
+mailbox signal, not proof of completion, content, or errors. After two
+waits with no substantive result, send one targeted followup:
+`TASK STILL ACTIVE: return <deliverable> or BLOCKED: <reason>`. If the
+child stays silent or ack-only, record the result as inconclusive, do
+not count it as pass/review approval, close if safe, and respawn a
+smaller `fork_turns: "none"` task with the missing deliverable.
+
 # start-work
 
 Execute a Prometheus work plan until every top-level checkbox is complete. This skill pairs with the Codex `Stop` / `SubagentStop` continuation hook in `components/start-work-continuation`, which re-injects the next turn while `.omo/boulder.json` says the current `codex:<session_id>` still has unchecked plan work.
