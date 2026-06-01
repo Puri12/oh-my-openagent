@@ -29,6 +29,7 @@ type MessageWithParts = {
 
 type MessagesTransformOutput = { messages: MessageWithParts[] }
 type MessagesTransformHooks = {
+  messagesImageResizer?: CreatedHooks["messagesImageResizer"]
   contextInjectorMessagesTransform?: CreatedHooks["contextInjectorMessagesTransform"]
   teamModeStatusInjector?: CreatedHooks["teamModeStatusInjector"]
   teamMailboxInjector?: CreatedHooks["teamMailboxInjector"]
