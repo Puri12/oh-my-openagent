@@ -1,8 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname } from "node:path"
-import { ensureContext7McpServer } from "./codex-config-mcp"
 import { ensureAutonomousPermissions } from "./codex-config-permissions"
 import { ensureCodexReasoningConfig } from "./codex-config-reasoning"
+import { readCodexModelCatalog } from "./codex-model-catalog"
 import { ensureCodexMultiAgentV2Config } from "./codex-multi-agent-v2-config"
 import { appendBlock, findTomlSection, replaceOrInsertSetting } from "./toml-section-editor"
 import type { CodexAgentConfig, CodexInstallPlatform, CodexMarketplaceSource, TrustedHookState } from "./types"
@@ -46,9 +46,8 @@ export async function updateCodexConfig(input: {
   )
   config = ensureFeatureEnabled(config, "plugins")
   config = ensureFeatureEnabled(config, "plugin_hooks")
-  config = ensureCodexReasoningConfig(config)
+  config = ensureCodexReasoningConfig(config, await readCodexModelCatalog(input.repoRoot))
   config = ensureCodexMultiAgentV2Config(config)
-  config = ensureContext7McpServer(config)
   if (input.autonomousPermissions === true) config = ensureAutonomousPermissions(config)
   config = ensureMarketplaceBlock(config, input.marketplaceName, input.marketplaceSource)
   for (const pluginName of input.pluginNames) {

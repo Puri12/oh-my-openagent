@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { ensureCodexMultiAgentV2Config } from "./multi-agent-v2-config.mjs";
+import { readCodexModelCatalog } from "./model-catalog.mjs";
 import { ensureCodexReasoningConfig } from "./reasoning-config.mjs";
 import { ensureAutonomousPermissions } from "./permissions.mjs";
 import { appendBlock, findTomlSection, replaceOrInsertSetting } from "./toml-editor.mjs";
@@ -17,14 +18,6 @@ const MANAGED_CODEX_AGENT_NAMES = [
 	"momus",
 	"plan",
 ];
-const CONTEXT7_MCP_SERVER_HEADER = "mcp_servers.context7";
-const CONTEXT7_MCP_SERVER_BLOCK = [
-	`[${CONTEXT7_MCP_SERVER_HEADER}]`,
-	`command = "npx"`,
-	`args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]`,
-	`startup_timeout_sec = 20`,
-	"",
-].join("\n");
 
 export async function updateCodexConfig({
 	configPath,
@@ -51,10 +44,9 @@ export async function updateCodexConfig({
 	config = removeStaleManagedAgentBlocks(config, new Set(agentConfigs.map((agentConfig) => agentConfig.name)));
 	config = ensureFeatureEnabled(config, "plugins");
 	config = ensureFeatureEnabled(config, "plugin_hooks");
-	config = ensureCodexReasoningConfig(config);
+	config = ensureCodexReasoningConfig(config, await readCodexModelCatalog(repoRoot));
 	config = ensureCodexMultiAgentV2Config(config);
 	if (autonomousPermissions === true) config = ensureAutonomousPermissions(config);
-	config = ensureContext7McpServer(config);
 	config = ensureMarketplaceBlock(config, marketplaceName, marketplaceSource);
 	for (const pluginName of pluginNames) {
 		config = ensurePluginEnabled(config, `${pluginName}@${marketplaceName}`);
@@ -143,11 +135,6 @@ function ensureMarketplaceBlock(config, marketplaceName, source) {
 	const section = findTomlSection(config, header);
 	if (section) return config.slice(0, section.start) + block + config.slice(section.end);
 	return appendBlock(config, block);
-}
-
-function ensureContext7McpServer(config) {
-	if (findTomlSection(config, CONTEXT7_MCP_SERVER_HEADER)) return config;
-	return appendBlock(config, CONTEXT7_MCP_SERVER_BLOCK);
 }
 
 function ensurePluginEnabled(config, pluginKey) {

@@ -37,16 +37,11 @@ async function readComponentVersions(root) {
 	const versions = new Map();
 	for (const entry of entries) {
 		if (!entry.isDirectory()) continue;
-		versions.set(entry.name, await readPackageVersion(join(componentsRoot, entry.name, "package.json")));
+		const packageJsonPath = join(componentsRoot, entry.name, "package.json");
+		if (!(await exists(packageJsonPath))) continue;
+		versions.set(entry.name, await readPackageVersion(packageJsonPath));
 	}
 	return versions;
-}
-
-function componentVersionForCommand(command, componentVersions, fallbackVersion) {
-	for (const [componentName, version] of componentVersions.entries()) {
-		if (command.includes(`/components/${componentName}/dist/cli.js`)) return version;
-	}
-	return fallbackVersion;
 }
 
 function syncHooksJson(hooksJson, versionForCommand) {
@@ -74,7 +69,7 @@ export async function syncHookStatusMessages(root = defaultRoot) {
 	const componentVersions = await readComponentVersions(root);
 	const aggregateHooksPath = join(root, "hooks", "hooks.json");
 	const aggregateHooks = await readJson(aggregateHooksPath);
-	syncHooksJson(aggregateHooks, (command) => componentVersionForCommand(command, componentVersions, aggregateVersion));
+	syncHooksJson(aggregateHooks, () => aggregateVersion);
 	await writeJson(aggregateHooksPath, aggregateHooks);
 
 	for (const [componentName, version] of componentVersions.entries()) {

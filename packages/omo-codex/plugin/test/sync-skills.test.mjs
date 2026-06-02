@@ -14,6 +14,7 @@ const expectedSkills = [
 	"debugging",
 	"frontend-ui-ux",
 	"init-deep",
+	"lcx-report-bug",
 	"lsp",
 	"programming",
 	"refactor",
@@ -33,6 +34,7 @@ const componentSkillSources = [
 ];
 
 const codexCompatibilityEndMarkers = [
+	"Codex full-history forks inherit the parent agent type, model, and reasoning effort, so role-specific spawns with `agent_type` must use a non-full-history fork mode such as `fork_turns=\"none\"`. Include any required conversation context, files, diffs, constraints, and requested skill names directly in the spawned agent's `message`. If a code block below conflicts with this section, this section wins.\n\n",
 	"When translating `load_skills=[...]`, include the requested skill names in the spawned agent's `message`. If a code block below conflicts with this section, this section wins.\n\n",
 	"When translating `load_skills=[...]`, name the skills inside the spawned agent's `message`. If a code block below conflicts with this section, this section wins.\n\n",
 ];
@@ -151,6 +153,26 @@ test("#given synced ulw-loop skill #when Codex hint metadata is inspected #then 
 	// then
 	assert.match(interfaceMetadata, /search_terms:/);
 	assert.match(interfaceMetadata, /- "ulw-loop"/);
+});
+
+test("#given synced lcx-report-bug skill #when inspected #then it files LazyCodex bug issues from proven debugging evidence", async () => {
+	// given
+	const skillRoot = join(root, "skills", "lcx-report-bug");
+
+	// when
+	const skill = await readFile(join(skillRoot, "SKILL.md"), "utf8");
+	const interfaceMetadata = await readFile(join(skillRoot, "agents", "openai.yaml"), "utf8");
+
+	// then
+	assert.match(skill, /^---\r?\nname: lcx-report-bug\r?\n/m);
+	assert.match(skill, /code-yeongyu\/lazycodex/);
+	assert.match(skill, /\$omo:debugging/);
+	assert.match(skill, /gh issue create --repo code-yeongyu\/lazycodex/);
+	assert.match(skill, /Browser use fallback/);
+	assert.match(skill, /Computer use fallback/);
+	assert.match(skill, /## Issue Body Template/);
+	assert.match(interfaceMetadata, /display_name: "lcx-report-bug \(omo\)"/);
+	assert.match(interfaceMetadata, /- "lazycodex bug"/);
 });
 
 test("#given synced ulw-loop skill #when worker guidance is inspected #then context-hygiene guidance matches the source", async () => {
