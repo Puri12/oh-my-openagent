@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, afterAll } from "bun:test"
+import { restoreModuleMocksForTestFile } from "../../../testing/module-mock-lifecycle"
 
 type PostToolUseMockResult = {
   block?: boolean
@@ -35,7 +36,10 @@ mock.module("../transcript", () => ({
   getTranscriptPath: () => "/tmp/transcript.jsonl",
 }))
 
-afterAll(() => { mock.restore() })
+afterAll(() => {
+  mock.restore()
+  restoreModuleMocksForTestFile(import.meta.url)
+})
 
 const { createToolExecuteAfterHandler } = await import("./tool-execute-after-handler")
 
@@ -176,5 +180,39 @@ describe("createToolExecuteAfterHandler", () => {
       ].join("\n\n")
     )
     expect(output.output).not.toContain("\r")
+  })
+
+  it("#given warning toast rejects with a non-Error value #when PostToolUse blocks #then output still receives hook sections", async () => {
+    // given
+    const thrownValue = "toast failed"
+    postToolUseResult = {
+      block: true,
+      reason: "warn",
+      warnings: ["warning from hook"],
+    }
+    const handler = createToolExecuteAfterHandler(
+      {
+        client: {
+          tui: {
+            showToast: async () => {
+              throw thrownValue
+            },
+          },
+        },
+        directory: "/repo",
+      } as never,
+      { disabledHooks: [] }
+    )
+    const output = {
+      title: "tool",
+      output: "",
+      metadata: {},
+    }
+
+    // when
+    await handler({ tool: "write", sessionID: "ses_test", callID: "call_test" }, output)
+
+    // then
+    expect(output.output).toBe("warning from hook")
   })
 })

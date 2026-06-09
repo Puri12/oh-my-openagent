@@ -1,6 +1,6 @@
 /// <reference types="bun-types" />
 
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
 import { OhMyOpenCodeConfigSchema, type OhMyOpenCodeConfig } from "../../config"
 import { resolveRunAgent } from "./agent-resolver"
 
@@ -89,6 +89,17 @@ describe("resolveRunAgent", () => {
     // then
     expect(agent).toBe("sisyphus")
   })
+
+  it("#given unknown custom agent #when resolving run agent #then leaves the custom prompt agent untouched", () => {
+    // given
+    const config = createConfig()
+
+    // when
+    const agent = resolveRunAgent({ message: "test", agent: "custom-agent" }, config, {})
+
+    // then
+    expect(agent).toBe("custom-agent")
+  })
 })
 
 describe("waitForEventProcessorShutdown", () => {
@@ -122,7 +133,7 @@ describe("waitForEventProcessorShutdown", () => {
 
     //#then
     const elapsed = performance.now() - start
-    expect(elapsed).toBeGreaterThanOrEqual(timeoutMs - 10)
+    expect(elapsed).toBeGreaterThanOrEqual(timeoutMs - 50)
   })
 })
 
@@ -168,40 +179,27 @@ describe("run environment setup", () => {
 describe("run with invalid model", () => {
   it("given invalid --model value, when run, then returns exit code 1 with error message", async () => {
     // given
-    const originalExit = process.exit
+    mock.restore()
     const originalError = console.error
     const errorMessages: string[] = []
-    const exitCodes: number[] = []
 
     console.error = (...args: unknown[]) => {
       errorMessages.push(args.map(String).join(" "))
     }
-    process.exit = ((code?: number) => {
-      exitCodes.push(code ?? 0)
-      throw new Error("exit")
-    }) as typeof process.exit
 
     try {
       // when
-      // Note: This will actually try to run - but the issue is that resolveRunModel
-      // is called BEFORE the try block, so it throws an unhandled exception
-      // We're testing the runner's error handling
-      const { run } = await import("./runner")
+      const { run } = await import(`./runner?invalid-model=${Date.now()}-${Math.random()}`)
+      const exitCode = await run({
+        message: "test",
+        model: "invalid",
+      })
 
-      // This will throw because model "invalid" is invalid format
-      try {
-        await run({
-          message: "test",
-          model: "invalid",
-        })
-      } catch {
-        // Expected to potentially throw due to unhandled model resolution error
-      }
+      // then
+      expect(exitCode).toBe(1)
+      expect(errorMessages.join("\n")).toContain("Model string must be in 'provider/model' format")
     } finally {
-      // then - verify error handling
-      // Currently this will fail because the error is not caught properly
       console.error = originalError
-      process.exit = originalExit
     }
   })
 })

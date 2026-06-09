@@ -1,6 +1,6 @@
-# src/features/ — 20 Feature Modules
+# src/features/ — 21 Feature Modules
 
-**Generated:** 2026-05-20
+**Generated:** 2026-06-08
 
 ## OVERVIEW
 
@@ -15,7 +15,7 @@ File counts are NON-TEST `.ts` files only (test files co-located but excluded fr
 | **team-mode** | 60 / 8 subdirs | HIGH | yes | Parallel multi-agent coordination — 12 `team_*` tools, mailbox, tasklist, worktrees, optional tmux layout |
 | **background-agent** | 30 / 1 subdir (spawner/) | HIGH | yes | Task lifecycle, concurrency (5/key), 3s polling, spawner pattern, circuit breaker. Newer files: `parent-wake-notifier.ts` (587 LOC), `loop-detector`, `error-classifier`, `fallback-retry-handler`, `process-cleanup`, `subagent-spawn-limits`, `session-status-classifier`, `compaction-aware-message-resolver`. |
 | **tmux-subagent** | 27 | HIGH | yes | Tmux pane management, grid planning, session orchestration via `runTmuxCommand` |
-| **opencode-skill-loader** | 25 / 1 subdir (merger/) | HIGH | yes | YAML frontmatter skill discovery from 4 scopes (project > opencode > user > global) |
+| **opencode-skill-loader** | 22 / 1 subdir (merger/) | HIGH | yes | YAML frontmatter skill discovery from 4 scopes (project > opencode > user > global) |
 | **builtin-skills** | 20 / 6 subdirs | LOW–MED | yes | 12 built-in skill files (git-master, playwright, frontend-ui-ux, review-work, remove-ai-slops, init-deep, security-research, security-review, dev-browser, playwright-cli, **team-mode**, …) |
 | **skill-mcp-manager** | 11 | HIGH | yes | Tier-3 MCP client lifecycle per session (stdio + HTTP + OAuth) |
 | **claude-code-plugin-loader** | 11 | MEDIUM | yes | Unified Claude Code plugin discovery (commands, agents, skills, hooks, MCPs) |
@@ -28,6 +28,7 @@ File counts are NON-TEST `.ts` files only (test files co-located but excluded fr
 | **context-injector** | 4 | LOW | no | AGENTS.md/README.md injection into session context |
 | **hook-message-injector** | 4 | LOW | no | System message injection helper used by hooks |
 | **run-continuation-state** | 4 | LOW | no | Persistent state for `oh-my-opencode run` continuation across invocations |
+| **opencode-runtime-skills** | 4 | LOW–MED | no | Runtime security-skill source — `selectRuntimeSecuritySkills()` + `createRuntimeSkillSourceServer()` serve security skills to sessions at runtime |
 | **claude-code-command-loader** | 4 | LOW | no | Load `/commands` from `.opencode/commands/` and Claude Code plugins |
 | **claude-tasks** | 3 | MEDIUM | yes | Sisyphus task schema + atomic file storage + OpenCode todo API sync |
 | **task-toast-manager** | 3 | MEDIUM | no | Task progress notifications |
@@ -59,7 +60,7 @@ Parallel multi-agent coordination, OFF by default. Subdirs:
 
 Eligible members: sisyphus, atlas, sisyphus-junior, hephaestus only. See [`team-mode/AGENTS.md`](file:///Users/yeongyu/local-workspaces/omo/src/features/team-mode/AGENTS.md).
 
-### opencode-skill-loader (~3.2k LOC)
+### opencode-skill-loader (~2.8k LOC)
 
 4-scope skill discovery (project > opencode > user > global):
 - YAML frontmatter parsing from SKILL.md files

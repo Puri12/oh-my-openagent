@@ -13,6 +13,7 @@ export type TeamLayoutDeps = {
   isServerRunning: typeof sharedTmuxModule.isServerRunning
   getTmuxPath: typeof tmuxPathResolverModule.getTmuxPath
   resolveCallerTmuxSession: typeof resolveCallerTmuxSession
+  log: typeof log
 }
 
 const defaultDeps: TeamLayoutDeps = {
@@ -20,6 +21,7 @@ const defaultDeps: TeamLayoutDeps = {
   isServerRunning: sharedTmuxModule.isServerRunning,
   getTmuxPath: tmuxPathResolverModule.getTmuxPath,
   resolveCallerTmuxSession,
+  log,
 }
 
 export type TeamLayoutResult = {
@@ -49,6 +51,21 @@ function buildAttachCommand(member: TeamLayoutMember, serverUrl: string): string
   return `opencode attach ${shellSingleQuote(serverUrl)} --session ${shellSingleQuote(member.sessionId)} --dir ${shellSingleQuote(getPaneWorkingDirectory(member))}`
 }
 
+function buildPaneEnvironmentArgs(): string[] {
+  const password = process.env.OPENCODE_SERVER_PASSWORD
+  if (!password) {
+    return []
+  }
+
+  const environmentArgs = ["-e", `OPENCODE_SERVER_PASSWORD=${password}`]
+  const username = process.env.OPENCODE_SERVER_USERNAME
+  if (username !== undefined) {
+    environmentArgs.push("-e", `OPENCODE_SERVER_USERNAME=${username}`)
+  }
+
+  return environmentArgs
+}
+
 async function listPanesInWindow(tmuxPath: string, windowTarget: string, deps: TeamLayoutDeps): Promise<Array<string>> {
   const result = await deps.runTmuxCommand(tmuxPath, ["list-panes", "-t", windowTarget, "-F", "#{pane_id}"])
   if (!result.success || !result.output) return []
@@ -60,12 +77,14 @@ function selectExistingTeammatePane(teammatePanes: Array<string>, callerPaneId: 
 }
 
 function buildSplitArgs(callerPaneId: string, teammatePanes: Array<string>, member: TeamLayoutMember): Array<string> {
+  const environmentArgs = buildPaneEnvironmentArgs()
   if (teammatePanes.length === 0) {
-    return ["split-window", "-t", callerPaneId, "-h", "-d", "-l", "70%", "-P", "-F", "#{pane_id}", "-c", getPaneWorkingDirectory(member)]
+    return ["split-window", ...environmentArgs, "-t", callerPaneId, "-h", "-d", "-l", "70%", "-P", "-F", "#{pane_id}", "-c", getPaneWorkingDirectory(member)]
   }
 
   return [
     "split-window",
+    ...environmentArgs,
     "-t",
     selectExistingTeammatePane(teammatePanes, callerPaneId),
     teammatePanes.length % 2 === 1 ? "-v" : "-h",
@@ -112,7 +131,7 @@ async function createTeamLayoutInCallerWindow(
 
 export async function createTeamLayout(teamRunId: string, members: Array<TeamLayoutMember>, tmuxMgr: TmuxSessionManager, deps: TeamLayoutDeps = defaultDeps): Promise<TeamLayoutResult | null> {
   if (!canVisualize()) {
-    log("tmux visualization unavailable, skipping")
+    deps.log("tmux visualization unavailable, skipping")
     return null
   }
   if (members.length === 0) {
@@ -123,7 +142,7 @@ export async function createTeamLayout(teamRunId: string, members: Array<TeamLay
     const serverUrl = tmuxMgr.getServerUrl()
     if (!(await deps.isServerRunning(serverUrl))) {
       const ctxServerUrl = tmuxMgr.getCtxServerUrl?.()
-      log("opencode server not reachable, skipping team layout (see issue #3963)", {
+      deps.log("opencode server not reachable, skipping team layout (see issue #3963)", {
         kind: "warning",
         teamRunId,
         serverUrl,
@@ -138,13 +157,13 @@ export async function createTeamLayout(teamRunId: string, members: Array<TeamLay
 
     const tmuxPath = await deps.getTmuxPath()
     if (!tmuxPath) {
-      log("tmux visualization unavailable, skipping")
+      deps.log("tmux visualization unavailable, skipping")
       return null
     }
 
     const callerSession = await deps.resolveCallerTmuxSession(tmuxPath)
     if (!callerSession) {
-      log("tmux visualization requires a resolvable caller tmux pane, skipping", { teamRunId })
+      deps.log("tmux visualization requires a resolvable caller tmux pane, skipping", { teamRunId })
       return null
     }
 
@@ -160,7 +179,8 @@ export async function createTeamLayout(teamRunId: string, members: Array<TeamLay
       ownedSession: false,
     }
   } catch (error) {
-    log("tmux visualization unavailable, skipping", { error: String(error) })
+    const errorMessage = error instanceof Error ? String(error) : String(error)
+    deps.log("tmux visualization unavailable, skipping", { error: errorMessage })
     return null
   }
 }
@@ -172,8 +192,8 @@ export async function removeTeamLayout(
   deps: TeamLayoutDeps = defaultDeps,
 ): Promise<void> {
   if (!canVisualize()) return
+  const resolvedDeps = isTeamLayoutDeps(tmuxMgrOrDeps) ? tmuxMgrOrDeps : deps
   try {
-    const resolvedDeps = isTeamLayoutDeps(tmuxMgrOrDeps) ? tmuxMgrOrDeps : deps
     const tmuxPath = await resolvedDeps.getTmuxPath()
     if (!tmuxPath) return
 
@@ -190,8 +210,12 @@ export async function removeTeamLayout(
       for (const paneId of cleanupTarget.paneIds) {
         try {
           await resolvedDeps.runTmuxCommand(tmuxPath, ["kill-pane", "-t", paneId])
-        } catch {
-          log("tmux team pane cleanup failed", { teamRunId, paneId })
+        } catch (error) {
+          if (!(error instanceof Error)) {
+            resolvedDeps.log("tmux team pane cleanup failed", { teamRunId, paneId })
+            continue
+          }
+          resolvedDeps.log("tmux team pane cleanup failed", { teamRunId, paneId })
         }
       }
       return
@@ -202,11 +226,13 @@ export async function removeTeamLayout(
       try {
         await resolvedDeps.runTmuxCommand(tmuxPath, ["kill-window", "-t", windowId])
       } catch (windowError) {
-        log("tmux team layout window cleanup failed", { teamRunId, windowId, error: String(windowError) })
+        const errorMessage = windowError instanceof Error ? String(windowError) : String(windowError)
+        resolvedDeps.log("tmux team layout window cleanup failed", { teamRunId, windowId, error: errorMessage })
       }
     }
   } catch (error) {
-    log("tmux team layout cleanup failed", { teamRunId, error: String(error) })
+    const errorMessage = error instanceof Error ? String(error) : String(error)
+    resolvedDeps.log("tmux team layout cleanup failed", { teamRunId, error: errorMessage })
   }
 }
 

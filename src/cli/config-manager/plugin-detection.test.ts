@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import * as fs from "node:fs"
+import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -62,6 +63,32 @@ describe("detectCurrentConfig - single package detection", () => {
     // then
     expect(result.isInstalled).toBe(true)
     expect(result.hasOpencodeGo).toBe(true)
+  })
+
+  it("uses default provider detection when omo config reading throws a non-Error value", () => {
+    // given
+    writeFileSync(testConfigPath, JSON.stringify({ plugin: ["oh-my-opencode"] }, null, 2) + "\n", "utf-8")
+    writeFileSync(testOmoConfigPath, "{}\n", "utf-8")
+    const originalReadFileSync = fs.readFileSync
+    const readFileSyncSpy = spyOn(fs, "readFileSync").mockImplementation((filePath, options) => {
+      if (String(filePath).endsWith("oh-my-opencode.json")) {
+        throw "read failed"
+      }
+      return originalReadFileSync(filePath, options)
+    })
+
+    try {
+      // when
+      const result = detectCurrentConfig()
+
+      // then
+      expect(result.isInstalled).toBe(true)
+      expect(result.hasOpenAI).toBe(true)
+      expect(result.hasOpencodeZen).toBe(true)
+      expect(result.hasOpencodeGo).toBe(false)
+    } finally {
+      readFileSyncSpy.mockRestore()
+    }
   })
 })
 
@@ -232,7 +259,7 @@ describe("addPluginToOpenCodeConfig - single package writes", () => {
 
     // then
     expect(result.success).toBe(true)
-    expect(result.configPath.endsWith("/profiles/today/opencode.json")).toBe(true)
+    expect(result.configPath).toBe(join(realpathSync(profileDir), "opencode.json"))
     const savedProfileConfig = JSON.parse(readFileSync(profileConfigPath, "utf-8"))
     expect(savedProfileConfig.plugin).toEqual([sourcePlugin])
   })

@@ -4,9 +4,9 @@ import { dirname, join } from "path"
 
 /**
  * Minimum OpenCode version required for this plugin.
- * This plugin only supports OpenCode 1.1.1+ which uses the permission system.
+ * This plugin only supports OpenCode 1.4.0+.
  */
-export const MINIMUM_OPENCODE_VERSION = "1.1.1"
+export const MINIMUM_OPENCODE_VERSION = "1.4.0"
 
 /**
  * OpenCode version that introduced native AGENTS.md injection.
@@ -92,7 +92,10 @@ function parsePackageVersion(content: string): string | null {
     if (typeof version !== "string" || version.length === 0) return null
 
     return version
-  } catch {
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error
+    }
     return null
   }
 }
@@ -103,7 +106,10 @@ function getPackageVersionFromBinary(binaryPath: string, deps: OpenCodeVersionDe
     const packagePath = join(dirname(dirname(realBinaryPath)), "package.json")
     if (!deps.exists(packagePath)) return null
     return parsePackageVersion(deps.readText(packagePath))
-  } catch {
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error
+    }
     return null
   }
 }
@@ -133,7 +139,10 @@ export function getOpenCodeVersion(deps: Partial<OpenCodeVersionDeps> = {}): str
     const versionMatch = result.match(/(\d+\.\d+\.\d+(?:-[\w.]+)?)/)
     cachedVersion = versionMatch?.[1] ?? null
     return cachedVersion
-  } catch {
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error
+    }
     cachedVersion = null
     return null
   }

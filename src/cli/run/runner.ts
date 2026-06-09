@@ -16,6 +16,7 @@ import { createTimestampedStdoutController } from "./timestamp-output"
 import { createCliPostHog, getPostHogDistinctId } from "../../shared/posthog"
 import { dispatchInternalPrompt, isInternalPromptDispatchAccepted } from "../../shared/prompt-async-gate"
 import { isAmbiguousPostDispatchPromptFailure } from "../../shared/prompt-failure-classifier"
+import { resolveRunnableRunAgent } from "./runnable-agent-resolver"
 
 export { resolveRunAgent }
 
@@ -58,8 +59,10 @@ export async function run(options: RunOptions): Promise<number> {
   const distinctId = getPostHogDistinctId()
   try {
     posthog.trackActive(distinctId, "run_started")
-  } catch {
-    // telemetry failure is non-fatal, silently ignore
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      void error
+    }
   }
 
   try {
@@ -91,6 +94,7 @@ export async function run(options: RunOptions): Promise<number> {
         sessionId: options.sessionId,
         directory,
       })
+      const runnableAgent = await resolveRunnableRunAgent(client, resolvedAgent, pluginConfig)
 
       console.log(pc.dim(`Session: ${sessionID}`))
 
@@ -122,7 +126,7 @@ export async function run(options: RunOptions): Promise<number> {
         input: {
           path: { id: sessionID },
           body: {
-            agent: resolvedAgent,
+            agent: runnableAgent,
             ...(resolvedModel ? { model: resolvedModel } : {}),
             tools: {
               question: false,
@@ -197,8 +201,10 @@ export async function run(options: RunOptions): Promise<number> {
   } finally {
     try {
       await posthog.shutdown()
-    } catch {
-      // telemetry failure is non-fatal, silently ignore
+    } catch (error) {
+      if (!(error instanceof Error)) {
+        void error
+      }
     }
     timestampOutput?.restore()
   }

@@ -57,7 +57,7 @@ describe("codex-config-toml", () => {
     expect(content).not.toContain('sandbox = "elevated"')
   })
 
-  test("#given empty Codex config #when updating config #then enables MultiAgentV2 with ten thousand session threads", async () => {
+  test("#given empty Codex config #when updating config #then creates MultiAgentV2 section with thread limit but no forced enabled flag", async () => {
     // given
     const root = await mkdtemp(join(tmpdir(), "omo-codex-config-multi-agent-"))
     const configPath = join(root, "config.toml")
@@ -74,11 +74,13 @@ describe("codex-config-toml", () => {
     // then
     const content = await readFile(configPath, "utf8")
     expect(content).toContain("[features.multi_agent_v2]")
-    expect(content).toContain("enabled = true")
+    const v2Section = content.slice(content.indexOf("[features.multi_agent_v2]"))
+      .split(/^\[/m).slice(0, 1).join("")
+    expect(v2Section).not.toContain("enabled")
     expect(content).toContain("max_concurrent_threads_per_session = 10000")
   })
 
-  test("#given existing MultiAgentV2 table #when updating config #then preserves unrelated tuning while setting ten thousand session threads", async () => {
+  test("#given existing MultiAgentV2 table #when updating config #then preserves user enabled flag and unrelated tuning while setting thread limit", async () => {
     // given
     const root = await mkdtemp(join(tmpdir(), "omo-codex-config-multi-agent-existing-"))
     const configPath = join(root, "config.toml")
@@ -105,7 +107,7 @@ describe("codex-config-toml", () => {
     // then
     const content = await readFile(configPath, "utf8")
     expect(content).toContain("[features.multi_agent_v2]")
-    expect(content).toContain("enabled = true")
+    expect(content).toContain("enabled = false")
     expect(content).toContain("usage_hint_enabled = false")
     expect(content).toContain("max_concurrent_threads_per_session = 10000")
     expect(content).not.toContain("max_concurrent_threads_per_session = 4")
@@ -127,6 +129,29 @@ describe("codex-config-toml", () => {
 
     // then
     const content = await readFile(configPath, "utf8")
+    expect(content).not.toContain("[mcp_servers.context7]")
+    expect(content).not.toContain("@upstash/context7-mcp")
+    expect(content).not.toContain("YOUR_API_KEY")
+  })
+
+  test("#given sisyphuslabs omo install #when updating config #then enables Context7 plugin mcp policy", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-config-context7-plugin-policy-"))
+    const configPath = join(root, "config.toml")
+
+    // when
+    await updateCodexConfig({
+      configPath,
+      repoRoot: "/repo/packages/omo-codex",
+      marketplaceName: "sisyphuslabs",
+      marketplaceSource: { sourceType: "local", source: "/repo/packages/omo-codex/cache/sisyphuslabs" },
+      pluginNames: ["omo"],
+    })
+
+    // then
+    const content = await readFile(configPath, "utf8")
+    expect(content).toContain('[plugins."omo@sisyphuslabs".mcp_servers.context7]')
+    expect(content).toMatch(/\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\][\s\S]*?enabled = true/)
     expect(content).not.toContain("[mcp_servers.context7]")
     expect(content).not.toContain("@upstash/context7-mcp")
     expect(content).not.toContain("YOUR_API_KEY")
@@ -195,7 +220,9 @@ describe("codex-config-toml", () => {
     const content = await readFile(configPath, "utf8")
     expect(content).not.toMatch(/^multi_agent_v2\s*=/m)
     expect(content).toContain("[features.multi_agent_v2]")
-    expect(content).toContain("enabled = true")
+    const v2LegacySection = content.slice(content.indexOf("[features.multi_agent_v2]"))
+      .split(/^\[/m).slice(0, 1).join("")
+    expect(v2LegacySection).not.toContain("enabled")
     expect(content).toContain("usage_hint_enabled = false")
     expect(content).toContain("max_concurrent_threads_per_session = 10000")
   })
@@ -227,7 +254,9 @@ describe("codex-config-toml", () => {
     // then
     const content = await readFile(configPath, "utf8")
     expect(content).toContain("[features.multi_agent_v2]")
-    expect(content).toContain("enabled = true")
+    const v2ThreadsSection = content.slice(content.indexOf("[features.multi_agent_v2]"))
+      .split(/^\[/m).slice(0, 1).join("")
+    expect(v2ThreadsSection).not.toContain("enabled")
     expect(content).toContain("max_concurrent_threads_per_session = 10000")
     expect(content).toContain("[agents]")
     expect(content).not.toMatch(/^max_threads\s*=/m)
@@ -394,6 +423,54 @@ describe("codex-config-toml", () => {
     expect(content).toContain('config_file = "./agents/explorer.toml"')
     expect(content).not.toContain("stale-explorer")
     expect(content).not.toContain("ref = undefined")
+  })
+
+  test("#given git marketplace source #when updating config #then writes second-precision timestamp and ref", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-config-marketplace-git-"))
+    const configPath = join(root, "config.toml")
+
+    // when
+    await updateCodexConfig({
+      configPath,
+      repoRoot: "/repo/packages/omo-codex",
+      marketplaceName: "debug",
+      marketplaceSource: {
+        sourceType: "git",
+        source: "https://github.com/code-yeongyu/lazycodex.git",
+        ref: "main",
+      },
+      pluginNames: ["omo"],
+    })
+
+    // then
+    const content = await readFile(configPath, "utf8")
+    const lastUpdatedLine = content.split("\n").find((line) => line.startsWith("last_updated = "))
+    expect(lastUpdatedLine ?? "").toMatch(/^last_updated = "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"$/)
+    expect(content).toContain('source_type = "git"')
+    expect(content).toContain('source = "https://github.com/code-yeongyu/lazycodex.git"')
+    expect(content).toContain('ref = "main"')
+  })
+
+  test("#given agent name needs quoting #when updating config #then writes quoted agent key", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-config-quoted-agent-"))
+    const configPath = join(root, "config.toml")
+
+    // when
+    await updateCodexConfig({
+      configPath,
+      repoRoot: "/repo/packages/omo-codex",
+      marketplaceName: "debug",
+      marketplaceSource: { sourceType: "local", source: "/repo/packages/omo-codex" },
+      pluginNames: ["omo"],
+      agentConfigs: [{ name: "review.agent", configFile: "./agents/review.agent.toml" }],
+    })
+
+    // then
+    const content = await readFile(configPath, "utf8")
+    expect(content).toContain('[agents."review.agent"]')
+    expect(content).toContain('config_file = "./agents/review.agent.toml"')
   })
 
   test("#given windows platform #when updating sisyphuslabs plugin config #then enables git_bash plugin mcp policy", async () => {

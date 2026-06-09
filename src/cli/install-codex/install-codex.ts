@@ -1,15 +1,21 @@
 import { homedir } from "node:os"
 import { join, resolve } from "node:path"
 import { existsSync } from "node:fs"
-import { mkdir, writeFile } from "node:fs/promises"
-import { installCachedPlugin, linkCachedPluginBins, pruneMarketplaceCache, pruneMarketplacePluginCaches } from "./codex-cache"
+import { installCachedPlugin, linkCachedPluginBins, linkRootRuntimeBin, pruneMarketplaceCache, pruneMarketplacePluginCaches } from "./codex-cache"
+import { writeCachedMarketplaceManifest } from "./codex-cached-marketplace-manifest"
 import { shouldBuildSourcePackages } from "./codex-package-layout"
 import { updateCodexConfig } from "./codex-config-toml"
 import { trustedHookStatesForPlugin } from "./codex-hook-trust"
 import { prepareGitBashForInstall, resolveGitBashForCurrentProcess } from "./git-bash"
-import { linkCachedPluginAgents } from "./link-cached-plugin-agents"
+import { capturePreservedAgentReasoning, linkCachedPluginAgents } from "./link-cached-plugin-agents"
 import { readMarketplace, readPluginManifest, resolvePluginSource, validatePathSegment } from "./codex-marketplace"
 import { writeInstalledMarketplaceSnapshot, type MarketplaceSnapshotPluginSource } from "./codex-marketplace-snapshot"
+import {
+  readDistributionManifest,
+  resolveLazyCodexPluginVersion,
+  stampLazyCodexPluginVersion,
+  writeLazyCodexInstallSnapshot,
+} from "./lazycodex-version-stamp"
 import { defaultRunCommand } from "./codex-process"
 import { repairProjectLocalCodexArtifactsBestEffort } from "./codex-project-local-cleanup-best-effort"
 import type { CodexInstallOptions, CodexInstallResult, CodexMarketplaceSource, InstalledPlugin, MarketplaceManifest } from "./types"
@@ -44,6 +50,7 @@ export async function runCodexInstaller(options: CodexInstallOptions = {}): Prom
   const marketplace = await readMarketplace(repoRoot, {
     marketplacePath: join(codexPackageRoot, "marketplace.json"),
   })
+  const distributionManifest = await readDistributionManifest(repoRoot)
 
   const installed: InstalledPlugin[] = []
   const pluginSources: MarketplaceSnapshotPluginSource[] = []
@@ -57,7 +64,12 @@ export async function runCodexInstaller(options: CodexInstallOptions = {}): Prom
       )
     }
 
-    const version = manifest.version ?? "local"
+    const version = resolveLazyCodexPluginVersion({
+      manifestVersion: manifest.version,
+      marketplaceName: marketplace.name,
+      pluginName: entry.name,
+      distributionManifest,
+    })
     validatePathSegment(version, "plugin version")
     log(`Building ${entry.name}@${version}`)
 
@@ -70,15 +82,24 @@ export async function runCodexInstaller(options: CodexInstallOptions = {}): Prom
       sourcePath,
       version,
     })
+    if (marketplace.name === "sisyphuslabs" && plugin.name === "omo") {
+      await stampLazyCodexPluginVersion({ pluginRoot: plugin.path, version })
+      await writeLazyCodexInstallSnapshot({ pluginRoot: plugin.path, distributionManifest })
+    }
 
     const links = await linkCachedPluginBins({ binDir, pluginRoot: plugin.path, platform })
     for (const link of links) {
       log(`Linked ${link.name} -> ${link.target}`)
     }
+    if (marketplace.name === "sisyphuslabs" && plugin.name === "omo") {
+      const runtimeLink = await linkRootRuntimeBin({ binDir, codexHome, repoRoot, platform })
+      if (runtimeLink !== null) log(`Linked ${runtimeLink.name} -> ${runtimeLink.target}`)
+    }
     pluginSources.push({ name: entry.name, sourcePath })
     installed.push(plugin)
   }
 
+  const preservedReasoning = await capturePreservedAgentReasoning({ codexHome })
   const agentSourceRoots = await agentSourceRootsForInstall({
     codexHome,
     marketplace,
@@ -87,7 +108,7 @@ export async function runCodexInstaller(options: CodexInstallOptions = {}): Prom
   })
   for (const plugin of installed) {
     const pluginRoot = agentSourceRoots.get(plugin.name) ?? plugin.path
-    const agentLinks = await linkCachedPluginAgents({ codexHome, pluginRoot, platform })
+    const agentLinks = await linkCachedPluginAgents({ codexHome, pluginRoot, platform, preservedReasoning })
     for (const link of agentLinks) {
       log(`Linked agent ${link.name} -> ${link.target}`)
       const agentName = agentNameFromToml(link.name)
@@ -200,29 +221,6 @@ async function agentSourceRootsForInstall(input: {
     plugins: input.pluginSources,
   })
   return new Map(snapshotPlugins.map((plugin) => [plugin.name, plugin.path]))
-}
-
-async function writeCachedMarketplaceManifest(input: {
-  readonly marketplaceName: string
-  readonly marketplaceRoot: string
-  readonly plugins: readonly InstalledPlugin[]
-}): Promise<void> {
-  const marketplaceDir = join(input.marketplaceRoot, ".agents", "plugins")
-  await mkdir(marketplaceDir, { recursive: true })
-  await writeFile(
-    join(marketplaceDir, "marketplace.json"),
-    `${JSON.stringify(
-      {
-        name: input.marketplaceName,
-        plugins: input.plugins.map((plugin) => ({
-          name: plugin.name,
-          source: { source: "local", path: `./${plugin.name}/${plugin.version}` },
-        })),
-      },
-      null,
-      "\t",
-    )}\n`,
-  )
 }
 
 function legacyCacheMarketplaces(marketplaceName: string): readonly string[] {

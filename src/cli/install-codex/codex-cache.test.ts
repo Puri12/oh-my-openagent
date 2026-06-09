@@ -2,9 +2,10 @@
 /// <reference types="bun-types" />
 
 import { describe, expect, test } from "bun:test"
-import { mkdir, mkdtemp, readFile, readlink, stat, symlink, writeFile } from "node:fs/promises"
+import { realpathSync } from "node:fs"
+import { mkdir, mkdtemp, readdir, readFile, readlink, rename, stat, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { basename, join, relative, sep } from "node:path"
 import { installCachedPlugin, linkCachedPluginBins, rewriteCachedMcpManifest } from "./codex-cache"
 
 describe("codex-cache", () => {
@@ -81,6 +82,26 @@ describe("codex-cache", () => {
         dependencies: { "@scope/lsp-tools": "file:../lsp-tools-mcp" },
       }),
     )
+    await writeFile(
+      join(sourceRoot, "package-lock.json"),
+      JSON.stringify({
+        name: "@scope/omo",
+        version: "0.1.0",
+        lockfileVersion: 3,
+        packages: {
+          "": {
+            name: "@scope/omo",
+            version: "0.1.0",
+            dependencies: { "@scope/lsp-tools": "file:../lsp-tools-mcp" },
+          },
+          "../lsp-tools-mcp": { name: "@scope/lsp-tools", version: "0.1.0" },
+          "node_modules/@scope/lsp-tools": {
+            resolved: "../lsp-tools-mcp",
+            link: true,
+          },
+        },
+      }),
+    )
 
     // when
     const installed = await installCachedPlugin({
@@ -96,17 +117,26 @@ describe("codex-cache", () => {
     const cachedPackageJson = JSON.parse(await readFile(join(installed.path, "package.json"), "utf8")) as {
       dependencies: Record<string, string>
     }
-    expect(cachedPackageJson.dependencies["@scope/lsp-tools"]).toBe(`file:${join(root, "packages", "omo-codex", "lsp-tools-mcp")}`)
+    const sourceDependencyPath = join(root, "packages", "omo-codex", "lsp-tools-mcp")
+    const packageLockDependencyPath = relative(realpathSync(installed.path), sourceDependencyPath).split(sep).join("/")
+    expect(cachedPackageJson.dependencies["@scope/lsp-tools"]).toBe(`file:${sourceDependencyPath}`)
+    const cachedPackageLock = JSON.parse(await readFile(join(installed.path, "package-lock.json"), "utf8")) as {
+      packages: Record<string, { dependencies?: Record<string, string>; resolved?: string }>
+    }
+    expect(cachedPackageLock.packages[""]?.dependencies?.["@scope/lsp-tools"]).toBe(`file:${sourceDependencyPath}`)
+    expect(cachedPackageLock.packages[packageLockDependencyPath]).toEqual({ name: "@scope/lsp-tools", version: "0.1.0" })
+    expect(cachedPackageLock.packages["node_modules/@scope/lsp-tools"]?.resolved).toBe(packageLockDependencyPath)
   })
 
-  test("#given source plugin has a stale npm lockfile #when caching plugin #then lockfile is regenerated rather than copied", async () => {
+  test("#given source plugin has an npm lockfile #when caching plugin #then lockfile is preserved for deterministic install", async () => {
     // given
     const root = await mkdtemp(join(tmpdir(), "omo-codex-cache-lockfile-"))
     const codexHome = join(root, "codex-home")
     const sourceRoot = join(root, "plugin")
     await mkdir(sourceRoot, { recursive: true })
     await writeFile(join(sourceRoot, "package.json"), JSON.stringify({ name: "@scope/omo", version: "0.1.0" }))
-    await writeFile(join(sourceRoot, "package-lock.json"), '{"packages":{"components/ulw-loop":{}}}\n')
+    const lockfile = '{"packages":{"components/ulw-loop":{}}}\n'
+    await writeFile(join(sourceRoot, "package-lock.json"), lockfile)
 
     // when
     const installed = await installCachedPlugin({
@@ -119,7 +149,69 @@ describe("codex-cache", () => {
     })
 
     // then
-    await expect(stat(join(installed.path, "package-lock.json"))).rejects.toThrow()
+    expect(await readFile(join(installed.path, "package-lock.json"), "utf8")).toBe(lockfile)
+  })
+
+  test("#given existing cache #when npm install fails #then previous active cache is preserved", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-cache-install-fail-"))
+    const codexHome = join(root, "codex-home")
+    const sourceRoot = join(root, "plugin")
+    const cacheRoot = join(codexHome, "plugins", "cache", "debug", "omo", "0.1.0")
+    await mkdir(sourceRoot, { recursive: true })
+    await mkdir(cacheRoot, { recursive: true })
+    await writeFile(join(sourceRoot, "package.json"), JSON.stringify({ name: "@scope/omo", version: "0.1.0" }))
+    await writeFile(join(cacheRoot, "package.json"), JSON.stringify({ name: "@scope/omo-old", version: "0.0.9" }))
+
+    // when
+    await expect(
+      installCachedPlugin({
+        codexHome,
+        marketplaceName: "debug",
+        name: "omo",
+        sourcePath: sourceRoot,
+        version: "0.1.0",
+        runCommand: async (_command, args) => {
+          if (args.join(" ") === "ci --omit=dev") throw new Error("spawn npm ENOENT")
+        },
+      }),
+    ).rejects.toThrow("spawn npm ENOENT")
+
+    // then
+    expect(await readFile(join(cacheRoot, "package.json"), "utf8")).toBe(JSON.stringify({ name: "@scope/omo-old", version: "0.0.9" }))
+    expect(await readdir(join(codexHome, "plugins", "cache", "debug", "omo"))).toEqual(["0.1.0"])
+  })
+
+  test("#given existing cache #when final promotion fails #then previous active cache is restored", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-cache-promote-fail-"))
+    const codexHome = join(root, "codex-home")
+    const sourceRoot = join(root, "plugin")
+    const cacheRoot = join(codexHome, "plugins", "cache", "debug", "omo", "0.1.0")
+    await mkdir(sourceRoot, { recursive: true })
+    await mkdir(cacheRoot, { recursive: true })
+    await writeFile(join(sourceRoot, "package.json"), JSON.stringify({ name: "@scope/omo", version: "0.1.0" }))
+    await writeFile(join(cacheRoot, "package.json"), JSON.stringify({ name: "@scope/omo-old", version: "0.0.9" }))
+
+    // when
+    await expect(
+      installCachedPlugin({
+        codexHome,
+        marketplaceName: "debug",
+        name: "omo",
+        sourcePath: sourceRoot,
+        version: "0.1.0",
+        runCommand: async () => undefined,
+        renameDirectory: async (fromPath, toPath) => {
+          if (toPath === cacheRoot && basename(fromPath).startsWith(".tmp-")) throw new Error("rename final failed")
+          await rename(fromPath, toPath)
+        },
+      }),
+    ).rejects.toThrow("rename final failed")
+
+    // then
+    expect(await readFile(join(cacheRoot, "package.json"), "utf8")).toBe(JSON.stringify({ name: "@scope/omo-old", version: "0.0.9" }))
+    expect(await readdir(join(codexHome, "plugins", "cache", "debug", "omo"))).toEqual(["0.1.0"])
   })
 
   test("#given source plugin has built component runtimes #when caching plugin #then component dist files are preserved for hooks", async () => {
@@ -166,6 +258,79 @@ describe("codex-cache", () => {
     expect(second).toHaveLength(1)
     const linkedTarget = await readlink(join(binDir, "omo-hook"))
     expect(linkedTarget).toBe(join(pluginRoot, "dist", "cli.js"))
+  })
+
+  test("#given nested component declares reserved omo bin #when linking cached plugin bins #then skips the nested top-level command", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-cache-reserved-bin-"))
+    const pluginRoot = join(root, "plugin")
+    const componentRoot = join(pluginRoot, "components", "ulw-loop")
+    const binDir = join(root, "bin")
+    await mkdir(join(componentRoot, "dist"), { recursive: true })
+    await writeFile(join(pluginRoot, "package.json"), JSON.stringify({ name: "@scope/omo" }))
+    await writeFile(
+      join(componentRoot, "package.json"),
+      JSON.stringify({ name: "@scope/ulw-loop", bin: { omo: "dist/cli.js", "omo-ulw-loop": "dist/cli.js" } }),
+    )
+    await writeFile(join(componentRoot, "dist", "cli.js"), "#!/usr/bin/env node\n")
+
+    // when
+    const linked = await linkCachedPluginBins({ binDir, pluginRoot, platform: "linux" })
+
+    // then
+    expect(linked).toEqual([{ name: "omo-ulw-loop", path: join(binDir, "omo-ulw-loop"), target: join(componentRoot, "dist", "cli.js") }])
+    await expect(readlink(join(binDir, "omo"))).rejects.toThrow()
+    expect(await readlink(join(binDir, "omo-ulw-loop"))).toBe(join(componentRoot, "dist", "cli.js"))
+  })
+
+  test("#given stale managed ulw-loop omo symlink #when linking cached plugin bins #then removes it", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-cache-stale-omo-bin-"))
+    const pluginRoot = join(root, "plugin")
+    const componentRoot = join(pluginRoot, "components", "rules")
+    const binDir = join(root, "bin")
+    const oldTarget = join(root, "codex-home", "plugins", "cache", "sisyphuslabs", "omo", "0.1.0", "components", "ulw-loop", "dist", "cli.js")
+    await mkdir(join(componentRoot, "dist"), { recursive: true })
+    await mkdir(join(root, "codex-home", "plugins", "cache", "sisyphuslabs", "omo", "0.1.0", "components", "ulw-loop", "dist"), {
+      recursive: true,
+    })
+    await mkdir(binDir, { recursive: true })
+    await writeFile(join(pluginRoot, "package.json"), JSON.stringify({ name: "@scope/omo" }))
+    await writeFile(join(componentRoot, "package.json"), JSON.stringify({ name: "@scope/rules", bin: { "omo-rules": "dist/cli.js" } }))
+    await writeFile(join(componentRoot, "dist", "cli.js"), "#!/usr/bin/env node\n")
+    await writeFile(oldTarget, "#!/usr/bin/env node\n")
+    await symlink(oldTarget, join(binDir, "omo"))
+
+    // when
+    await linkCachedPluginBins({ binDir, pluginRoot, platform: "linux" })
+
+    // then
+    await expect(readlink(join(binDir, "omo"))).rejects.toThrow()
+    expect(await readlink(join(binDir, "omo-rules"))).toBe(join(componentRoot, "dist", "cli.js"))
+  })
+
+  test("#given stale local-source ulw-loop omo symlink #when linking cached plugin bins #then removes it", async () => {
+    // given
+    const root = await mkdtemp(join(tmpdir(), "omo-codex-cache-source-omo-bin-"))
+    const pluginRoot = join(root, "plugin")
+    const componentRoot = join(pluginRoot, "components", "rules")
+    const binDir = join(root, "bin")
+    const oldTarget = join(root, "repo", "packages", "omo-codex", "plugin", "components", "ulw-loop", "dist", "cli.js")
+    await mkdir(join(componentRoot, "dist"), { recursive: true })
+    await mkdir(join(root, "repo", "packages", "omo-codex", "plugin", "components", "ulw-loop", "dist"), { recursive: true })
+    await mkdir(binDir, { recursive: true })
+    await writeFile(join(pluginRoot, "package.json"), JSON.stringify({ name: "@scope/omo" }))
+    await writeFile(join(componentRoot, "package.json"), JSON.stringify({ name: "@scope/rules", bin: { "omo-rules": "dist/cli.js" } }))
+    await writeFile(join(componentRoot, "dist", "cli.js"), "#!/usr/bin/env node\n")
+    await writeFile(oldTarget, "#!/usr/bin/env node\n")
+    await symlink(oldTarget, join(binDir, "omo"))
+
+    // when
+    await linkCachedPluginBins({ binDir, pluginRoot, platform: "linux" })
+
+    // then
+    await expect(readlink(join(binDir, "omo"))).rejects.toThrow()
+    expect(await readlink(join(binDir, "omo-rules"))).toBe(join(componentRoot, "dist", "cli.js"))
   })
 
   test("#given legacy codex-prefixed component symlinks #when linking cached plugin bins #then removes stale managed symlinks without touching user files", async () => {
