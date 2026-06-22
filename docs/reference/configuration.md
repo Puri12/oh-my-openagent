@@ -192,6 +192,8 @@ Agent tab cycling defaults to Sisyphus, Hephaestus, Prometheus, Atlas. Override 
 | `textVerbosity`   | string        | Text verbosity: `low`, `medium`, `high`                |
 | `providerOptions` | object        | Provider-specific options                              |
 
+Prometheus is the exception for prompt replacement: its mandatory planner prompt always remains active so it can load `shared/ulw-plan` first. For `agents.prometheus`, both `prompt` and `prompt_append` are appended to the mandatory base prompt instead of replacing it.
+
 #### Anthropic Extended Thinking
 
 ```json
@@ -262,6 +264,8 @@ Object entries support: `model`, `variant`, `reasoningEffort`, `temperature`, `t
 #### File URIs for Prompts
 
 Both `prompt` and `prompt_append` support loading content from files via `file://` URIs. Category-level `prompt_append` supports the same URI forms.
+
+For Prometheus, file-backed `prompt` content is appended after the mandatory base prompt; it does not replace the base prompt.
 
 ```jsonc
 {
@@ -484,7 +488,7 @@ To disable the task system entirely, set `experimental.task_system` to `false`:
 
 Skills bring domain-specific expertise and embedded MCPs.
 
-Built-in skills: `playwright`, `playwright-cli`, `agent-browser`, `dev-browser`, `git-master`, `frontend-ui-ux`
+Built-in skills: `playwright`, `playwright-cli`, `agent-browser`, `dev-browser`, `git-master`, `frontend`
 
 Disable built-in skills: `{ "disabled_skills": ["playwright"] }`
 
@@ -619,10 +623,10 @@ Force-enable session notifications:
 
 ### MCPs
 
-Built-in MCPs (enabled by default): `websearch` (Exa AI), `context7` (library docs), `grep_app` (GitHub code search), `lsp` (local language-server tools), and `ast_grep` (local structural search/rewrite tools).
+Built-in MCPs (enabled by default): `websearch` (Exa AI), `context7` (library docs), `grep_app` (GitHub code search), and `lsp` (local language-server tools). Structural search and rewrite is provided by the `ast-grep` skill instead of a built-in MCP.
 
 ```json
-{ "disabled_mcps": ["websearch", "context7", "grep_app", "lsp", "ast_grep"] }
+{ "disabled_mcps": ["websearch", "context7", "grep_app", "lsp"] }
 ```
 
 ### LSP
@@ -1012,8 +1016,8 @@ When enabled, OmO registers the hash-anchored `edit` tool and activates the `has
 | `OMO_CODEX_CONFIG_MIGRATION_DISABLED` | Alias of `LAZYCODEX_CONFIG_MIGRATION_DISABLED` |
 | `OMO_SPARKSHELL_CONDENSE` | Set to `0` to disable sparkshell's oversized-output condensation and always print raw output |
 | `OMO_SPARKSHELL_CONDENSE_BUDGET` | Character budget before sparkshell condenses command output (default `20000`) |
-| `OMO_SPARKSHELL_SESSION_CONTEXT` | Set to `0` to stop sparkshell from appending Codex session context (first/latest user request and recent messages) to command output |
-| `OMO_SPARKSHELL_SPARK` | Set to `0` to skip the spark-model summarization of oversized sparkshell output and go straight to deterministic condensation. The spark summary is generated via `codex exec` from the shell output plus session context, reproduces the output as-is without masking anything, and appends a `[sparkshell caption]` line at the bottom stating what was omitted |
+| `OMO_SPARKSHELL_SESSION_CONTEXT` | Set to `0` to stop sparkshell from loading Codex session context (first/latest user request and recent messages) for oversized-output relevance ranking. Session context is never appended to command output |
+| `OMO_SPARKSHELL_SPARK` | Set to `0` to skip the spark-model summarization of oversized sparkshell output and go straight to deterministic condensation. The spark summary is generated via `codex exec` from the shell output plus session context, keeps selected output as-is without masking anything, and appends a `[sparkshell caption]` line at the bottom stating what the full output contained and what was omitted |
 | `OMO_SPARKSHELL_SPARK_MODEL` | Model used for the sparkshell spark summary (default `gpt-5.3-codex-spark`) |
 | `OMO_SPARKSHELL_SPARK_TIMEOUT_MS` | Timeout for the spark summary `codex exec` invocation in milliseconds (default `30000`) |
 | `OMO_SPARKSHELL_SPARK_BIN` | Binary used to invoke the spark model (default `codex`) |

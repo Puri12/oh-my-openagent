@@ -33,6 +33,18 @@ describe("ulw-loop skill contract", () => {
 		expect(workflow).toMatch(/none-applicable/);
 	});
 
+	it("#given full workflow #when checkpoint guidance is inspected #then non-final and final criteria gates differ", async () => {
+		// given
+		const workflow = await readFile(FULL_WORKFLOW_URL, "utf8");
+
+		// then
+		expect(workflow).toMatch(/non-final aggregate goal[^.]+essential[^.]+pass/i);
+		expect(workflow).toMatch(/non-essential criteria may remain pending/i);
+		expect(workflow).toMatch(/final aggregate goal[^.]+every criterion across the whole plan/i);
+		expect(workflow).toMatch(/final aggregate completion requires all criteria across the whole plan/i);
+		expect(workflow).toMatch(/5 cycles on one goal without required criteria passing/i);
+	});
+
 	it("#given full workflow #when echo discipline is inspected #then the ultraqa class list is enumerated once and budgets hold", async () => {
 		// given
 		const workflow = await readFile(FULL_WORKFLOW_URL, "utf8");
@@ -40,7 +52,7 @@ describe("ulw-loop skill contract", () => {
 
 		// then
 		expect(workflow.match(/malformed input, prompt injection/g)?.length ?? 0).toBe(1);
-		expect(wordCount(workflow)).toBeLessThanOrEqual(3544);
+		expect(wordCount(workflow)).toBeLessThanOrEqual(3697);
 		expect(wordCount(skill)).toBeLessThanOrEqual(611);
 	});
 });
