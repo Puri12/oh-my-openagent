@@ -155,7 +155,7 @@ lsp_diagnostics catches type errors only. Logic bugs, missing behavior, broken f
 | Changes build output | Run build. Verify output files. |
 | Modifies API behavior | Call the endpoint. Show response. |
 | Renders/changes a page | Use Chrome to drive the page; if Chrome is not available, download and use agent-browser (https://github.com/vercel-labs/agent-browser). Screenshot + action log. |
-| Changes UI rendering or a TUI/terminal layout (incl. CJK/Korean/Japanese/Chinese text) | Load the visual-qa skill: capture reference + actual screenshots (web) or `tmux capture-pane` (TUI), run its bundled pixel-diff / column-width script, and get the dual read-only verdict (design-system + functional integrity, and visual fidelity + CJK precision). Record the diff/score artifact. |
+| Changes UI rendering or a TUI/terminal layout (incl. CJK/Korean/Japanese/Chinese text) | Load the visual-qa skill: capture reference + actual screenshots (web) or the xterm.js web terminal render (TUI; NEVER `tmux capture-pane` - it degrades color and CJK width), run its bundled pixel-diff / column-width script, and get the dual read-only verdict (design-system + functional integrity, and visual fidelity + CJK precision). Record the diff/score artifact. |
 | Drives a desktop GUI | Computer use: OS-level GUI automation against the running app. Action log + screenshot. |
 | Adds tool/hook/feature | Test end-to-end in a real scenario. |
 | Modifies config handling | Load config. Verify parsed shape. |
@@ -165,7 +165,7 @@ Name the exact tool + exact invocation per scenario (literal `curl` / `send-keys
 
 ## REVIEWER GATE (triggered)
 
-Trigger if user said "엄밀"/"strictly"/"rigorously"/"properly review", or task touches 3+ files OR ran 20+ turns OR 30+ min, or it's a refactor/migration/perf/security change. Spawn a high-rigor reviewer via `task` with goal + scenarios + evidence + diff. Reviewer verdict is BINDING; "looks good but..." = rejection. Re-submit until UNCONDITIONAL approval before declaring done.
+Trigger if user said "엄밀"/"strictly"/"rigorously"/"properly review", or task touches 3+ files OR ran 20+ turns OR 30+ min, or it's a refactor/migration/perf/security change. Spawn a high-rigor reviewer via `task` with goal + scenarios + evidence + diff. A concern blocks only when it cites a success criterion the evidence fails — others are notes. Fix cited blockers, re-run only the affected QA, and re-submit the delta at most twice; an approval with only notes left counts as approval. If cited blockers remain after two re-reviews, surface them to the user before declaring done.
 
 ## COMPLETION CRITERIA
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -20,6 +20,7 @@ function autoUpdateEnv(root, extra = {}) {
 		LAZYCODEX_MODEL_CATALOG_STATE_PATH: join(root, "model-state.json"),
 		LAZYCODEX_AUTO_UPDATE_STATE_PATH: join(root, "state.json"),
 		LAZYCODEX_AUTO_UPDATE_LOG_PATH: join(root, "auto-update.log"),
+		LAZYCODEX_CONFIG_MIGRATION_DISABLED: "1",
 		...extra,
 	};
 }
@@ -45,6 +46,28 @@ test("#given a newer version #when resolving auto update plan #then plan carries
 	assert.equal(plan.shouldRun, true);
 	assert.equal(plan.currentVersion, "1.0.0");
 	assert.equal(plan.latestVersion, "1.0.1");
+});
+
+test("#given SessionStart migration removes unsupported root multi-agent mode #when startup check runs #then emits cleanup notice", async () => {
+	const root = await mkdtemp(join(tmpdir(), "lazycodex-root-mode-cleanup-notice-"));
+	const env = autoUpdateEnv(root, {
+		LAZYCODEX_CURRENT_VERSION: "1.0.1",
+		LAZYCODEX_LATEST_VERSION: "1.0.1",
+		LAZYCODEX_CONFIG_MIGRATION_DISABLED: "0",
+	});
+	await mkdir(env.CODEX_HOME, { recursive: true });
+	await writeFile(join(env.CODEX_HOME, "config.toml"), ['multi_agent_mode = "queue"', ""].join("\n"));
+
+	const result = await runAutoUpdateCheck({ env, now: 90_000_000 });
+
+	assert.equal(result.started, false);
+	assert.equal(result.reason, "up-to-date");
+	assert.equal(result.notices.length, 1);
+	assert.match(result.notices[0], /multi_agent_mode/);
+	assert.match(result.notices[0], /Removed unsupported Codex root/);
+	assert.match(result.notices[0], /per-turn multiAgentMode API/);
+	const config = await readFile(join(env.CODEX_HOME, "config.toml"), "utf8");
+	assert.doesNotMatch(config, /^\s*multi_agent_mode\s*=/m);
 });
 
 test("#given a newer version #when waited update succeeds #then returns update-started notice and persists pendingNotice", async () => {
@@ -200,4 +223,37 @@ test("#given completed pending update #when hook session-start runs as CLI #then
 
 	assert.equal(repeat.status, 0);
 	assert.equal(repeat.stdout, "");
+});
+
+test("#given the script reached through a symlinked directory #when hook session-start runs as CLI #then the entry guard still fires", async () => {
+	const root = await mkdtemp(join(tmpdir(), "lazycodex-restart-notice-symlink-"));
+	const env = autoUpdateEnv(root, {
+		LAZYCODEX_CURRENT_VERSION: "1.0.1",
+		LAZYCODEX_LATEST_VERSION: "1.0.1",
+		LAZYCODEX_CONFIG_MIGRATION_DISABLED: "1",
+	});
+	await writeFile(env.LAZYCODEX_AUTO_UPDATE_STATE_PATH, JSON.stringify({
+		lastCheckedAt: Date.now() - 1_000,
+		lastStatus: "success",
+		pendingNotice: { fromVersion: "1.0.0", toVersion: "1.0.1", startedAt: 1 },
+	}));
+	// Simulate a symlinked plugin cache dir: argv[1] spells the symlink, while
+	// import.meta.url resolves to the real path. Seen in the wild; the old
+	// `pathToFileURL(process.argv[1])` guard never matched and the hook was a
+	// silent no-op.
+	const { symlink } = await import("node:fs/promises");
+	const { dirname } = await import("node:path");
+	const linkDir = join(root, "linked-scripts");
+	await symlink(dirname(SCRIPT_PATH), linkDir, "dir");
+	const linkedScript = join(linkDir, "auto-update.mjs");
+
+	const result = spawnSync(process.execPath, [linkedScript, "hook", "session-start"], {
+		encoding: "utf8",
+		env: { ...process.env, ...env },
+	});
+
+	assert.equal(result.status, 0);
+	const lines = result.stdout.split("\n").filter((line) => line.length > 0);
+	assert.equal(lines.length, 1, `expected one SessionStart JSON line, got stdout=${JSON.stringify(result.stdout)} stderr=${JSON.stringify(result.stderr)}`);
+	assert.equal(JSON.parse(lines[0]).hookSpecificOutput.hookEventName, "SessionStart");
 });
