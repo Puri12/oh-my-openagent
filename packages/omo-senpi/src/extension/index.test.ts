@@ -16,10 +16,11 @@ describe("omo-senpi extension entry", () => {
         "omo-senpi-comment-checker-disabled",
         "omo-senpi-telemetry-disabled",
         "omo-senpi-lsp-disabled",
+        "omo-senpi-mempalace-disabled",
       ]),
     )
     expect(pi.handlers.map((handler) => handler.event)).toEqual(
-      expect.arrayContaining(["input", "tool_result", "session_start"]),
+      expect.arrayContaining(["input", "tool_result", "session_start", "before_agent_start"]),
     )
   })
 })

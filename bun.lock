@@ -226,6 +226,7 @@
         "@oh-my-opencode/team-core": "workspace:*",
         "@oh-my-opencode/telemetry-core": "workspace:*",
         "@oh-my-opencode/utils": "workspace:*",
+        "typebox": "1.1.38",
         "vscode-jsonrpc": "^8.2.1",
       },
       "devDependencies": {

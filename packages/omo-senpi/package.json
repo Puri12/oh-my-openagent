@@ -32,6 +32,7 @@
     "@oh-my-opencode/omo-config-core": "workspace:*",
     "@oh-my-opencode/delegate-core": "workspace:*",
     "@oh-my-opencode/team-core": "workspace:*",
+    "typebox": "1.1.38",
     "vscode-jsonrpc": "^8.2.1"
   },
   "peerDependencies": {
