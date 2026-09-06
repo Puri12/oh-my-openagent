@@ -33,6 +33,7 @@ const PACKED_ARTIFACTS = [
   "plugin/runtime/agent-toolkit/ulw-loop/cli.js",
   "plugin/runtime/agent-toolkit/omo-agent-toolkit",
   "plugin/runtime/agent-toolkit/omo-agent-toolkit.cmd",
+  "plugin/runtime/remote/cli.js",
   "plugin/runtime/dag/sdk.js",
 ] as const
 

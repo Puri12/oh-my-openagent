@@ -91,6 +91,7 @@ describe("build:omo-native staged payload", () => {
             join("runtime", "agent-toolkit", "omo-agent-toolkit"),
             join("runtime", "agent-toolkit", "omo-agent-toolkit.cmd"),
             join("runtime", "agent-toolkit", "directive.md"),
+            join("runtime", "remote", "cli.js"),
             join("runtime", "lsp-daemon", "dist", "cli.js"),
             join("scripts", "install.mjs"),
             "package.json",

@@ -52,6 +52,7 @@ export const REQUIRED_PLUGIN_ARTIFACTS = [
   join("runtime", "agent-toolkit", "ulw-loop", "cli.js"),
   join("runtime", "agent-toolkit", "omo-agent-toolkit"),
   join("runtime", "agent-toolkit", "omo-agent-toolkit.cmd"),
+  join("runtime", "remote", "cli.js"),
   join("runtime", "lsp-daemon", "dist", "cli.js"),
   join("runtime", "lsp-daemon", "dist", "index.js"),
   join("runtime", "lsp-daemon", "dist", "index.d.ts"),

@@ -282,6 +282,7 @@ var REQUIRED_PLUGIN_ARTIFACTS = [
   join4("runtime", "agent-toolkit", "ulw-loop", "cli.js"),
   join4("runtime", "agent-toolkit", "omo-agent-toolkit"),
   join4("runtime", "agent-toolkit", "omo-agent-toolkit.cmd"),
+  join4("runtime", "remote", "cli.js"),
   join4("runtime", "lsp-daemon", "dist", "cli.js"),
   join4("runtime", "lsp-daemon", "dist", "index.js"),
   join4("runtime", "lsp-daemon", "dist", "index.d.ts"),

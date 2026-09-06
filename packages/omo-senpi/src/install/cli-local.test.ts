@@ -71,6 +71,7 @@ async function makePackagedPlugin(): Promise<string> {
   await writeFixtureFile(toolkitShim, "#!/bin/sh\nexec node \"$(dirname \"$0\")/cli.js\" \"$@\"\n")
   await chmod(toolkitShim, 0o755)
   await writeFixtureFile(join(pluginPath, "runtime", "agent-toolkit", "omo-agent-toolkit.cmd"), "@echo off\r\nnode \"%~dp0cli.js\" %*\r\n")
+  await writeFixtureFile(join(pluginPath, "runtime", "remote", "cli.js"), "console.log('remote')\n")
   await writeFixtureFile(join(pluginPath, "runtime", "lsp-daemon", "dist", "cli.js"), "console.log('cli')\n")
   await writeFixtureFile(join(pluginPath, "runtime", "lsp-daemon", "dist", "index.js"), "export {}\n")
   await writeFixtureFile(join(pluginPath, "runtime", "lsp-daemon", "dist", "index.d.ts"), "export {}\n")

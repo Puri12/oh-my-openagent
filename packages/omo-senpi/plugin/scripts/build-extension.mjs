@@ -60,6 +60,10 @@ const supervisorEntryPath = join(packageRoot, "src", "components", "memory", "wo
 const supervisorOutputPath = process.env.OMO_SENPI_PLUGIN_OUTPUT === undefined ? join(pluginRoot, "extensions", "memory-run-supervisor.mjs") : join(process.env.OMO_SENPI_PLUGIN_OUTPUT, "extensions", "memory-run-supervisor.mjs")
 const advisorRuntimeEntryPath = join(packageRoot, "src", "components", "init-deep-advisor", "runtime.ts")
 const advisorRuntimeOutputPath = process.env.OMO_SENPI_PLUGIN_OUTPUT === undefined ? join(pluginRoot, "extensions", "omo-init-deep-advisor.js") : join(process.env.OMO_SENPI_PLUGIN_OUTPUT, "extensions", "omo-init-deep-advisor.js")
+// The remote CLI is a standalone runtime artifact (no senpi imports), so it lands under runtime/
+// beside the agent-toolkit CLI rather than in extensions/.
+const remoteCliEntryPath = join(packageRoot, "src", "components", "remote", "cli.ts")
+const remoteCliOutputPath = process.env.OMO_SENPI_PLUGIN_OUTPUT === undefined ? join(pluginRoot, "runtime", "remote", "cli.js") : join(process.env.OMO_SENPI_PLUGIN_OUTPUT, "runtime", "remote", "cli.js")
 const builtinModuleNames = builtinModules
   .filter((moduleName) => !moduleName.startsWith("_"))
   .sort()
@@ -101,17 +105,21 @@ export async function buildExtension(options = {}) {
   const advisorRuntimeOutput = options.advisorRuntimeOutputPath ?? (options.outputPath === undefined
     ? advisorRuntimeOutputPath
     : join(dirname(output), "omo-init-deep-advisor.js"))
+  const remoteCliOutput = options.remoteCliOutputPath ?? (options.outputPath === undefined
+    ? remoteCliOutputPath
+    : join(dirname(output), "remote", "cli.js"))
   const mainInputs = await buildEntry(entryPath, output, buildDefines)
   const taskInputs = await buildEntry(taskEntryPath, taskOutput, buildDefines)
   const memberInputs = await buildEntry(memberEntryPath, memberOutput, buildDefines)
   const supervisorInputs = await buildEntry(supervisorEntryPath, supervisorOutput, buildDefines)
   const advisorRuntimeInputs = await buildEntry(advisorRuntimeEntryPath, advisorRuntimeOutput, buildDefines)
+  const remoteCliInputs = await buildEntry(remoteCliEntryPath, remoteCliOutput, buildDefines)
   // Bundling inlines assets.ts but its markdown is read from disk at runtime next to the bundle,
   // so the persona must be staged into the extension output directory the loader executes from.
   await Promise.all([
     stageRuntimePersonas(repoRoot, dirname(output)),
   ])
-  return { mainInputs, taskInputs, memberInputs, supervisorInputs, advisorRuntimeInputs }
+  return { mainInputs, taskInputs, memberInputs, supervisorInputs, advisorRuntimeInputs, remoteCliInputs }
 }
 
 async function buildEntry(entry, output, buildDefines) {
@@ -154,6 +162,9 @@ export async function checkExtensionCurrent(options = {}) {
   const advisorRuntimeOutput = options.advisorRuntimeOutputPath ?? (options.outputPath === undefined
     ? advisorRuntimeOutputPath
     : join(dirname(output), "omo-init-deep-advisor.js"))
+  const remoteCliOutput = options.remoteCliOutputPath ?? (options.outputPath === undefined
+    ? remoteCliOutputPath
+    : join(dirname(output), "remote", "cli.js"))
   const currentMain = await readBuiltEntry(output)
   if (currentMain === undefined) return { ok: false, reason: "missing-output", output }
   const currentTask = await readBuiltEntry(taskOutput)
@@ -166,6 +177,8 @@ export async function checkExtensionCurrent(options = {}) {
   if (currentAdvisorRuntime === undefined) {
     return { ok: false, reason: "missing-output", output: advisorRuntimeOutput }
   }
+  const currentRemoteCli = await readBuiltEntry(remoteCliOutput)
+  if (currentRemoteCli === undefined) return { ok: false, reason: "missing-output", output: remoteCliOutput }
 
   // Rebuild OUTSIDE the repository: an output tree inside repoRoot is a transient sibling of the
   // sources being hashed, and on some CI runners the sidecar built into it differed from a build
@@ -177,6 +190,7 @@ export async function checkExtensionCurrent(options = {}) {
   const expectedMemberOutput = join(tempRoot, "omo-member.js")
   const expectedSupervisorOutput = join(tempRoot, "memory-run-supervisor.mjs")
   const expectedAdvisorRuntimeOutput = join(tempRoot, "omo-init-deep-advisor.js")
+  const expectedRemoteCliOutput = join(tempRoot, "remote", "cli.js")
   try {
     await buildExtension({
       outputPath: expectedOutput,
@@ -184,6 +198,7 @@ export async function checkExtensionCurrent(options = {}) {
       memberOutputPath: expectedMemberOutput,
       supervisorOutputPath: expectedSupervisorOutput,
       advisorRuntimeOutputPath: expectedAdvisorRuntimeOutput,
+      remoteCliOutputPath: expectedRemoteCliOutput,
     })
     if (!artifactsMatch(currentMain, await readFile(expectedOutput, "utf8"))) {
       return { ok: false, reason: "stale-output", output }
@@ -200,9 +215,12 @@ export async function checkExtensionCurrent(options = {}) {
     if (!artifactsMatch(currentAdvisorRuntime, await readFile(expectedAdvisorRuntimeOutput, "utf8"))) {
       return { ok: false, reason: "stale-output", output: advisorRuntimeOutput }
     }
+    if (!artifactsMatch(currentRemoteCli, await readFile(expectedRemoteCliOutput, "utf8"))) {
+      return { ok: false, reason: "stale-output", output: remoteCliOutput }
+    }
     const stalePersona = await findStaleRuntimePersona(tempRoot, dirname(output), repoRoot)
     if (stalePersona !== undefined) return { ok: false, reason: "stale-output", output: stalePersona }
-    return { ok: true, output, taskOutput, memberOutput, advisorRuntimeOutput }
+    return { ok: true, output, taskOutput, memberOutput, advisorRuntimeOutput, remoteCliOutput }
   } finally {
     await rm(tempRoot, { recursive: true, force: true })
   }
@@ -260,6 +278,6 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     console.log(`omo-senpi extension build is current: ${result.output}`)
   } else {
     await buildExtension()
-    console.log(`Built omo-senpi extensions: ${outputPath}, ${taskOutputPath}, ${memberOutputPath}, ${supervisorOutputPath}, ${advisorRuntimeOutputPath}`)
+    console.log(`Built omo-senpi extensions: ${outputPath}, ${taskOutputPath}, ${memberOutputPath}, ${supervisorOutputPath}, ${advisorRuntimeOutputPath}, ${remoteCliOutputPath}`)
   }
 }

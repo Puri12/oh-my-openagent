@@ -24,6 +24,20 @@ describe("createOmoSenpiComponents", () => {
     expect(occurrences).toEqual(["x-search"])
   })
 
+  test("#given the production registration array #when remote is looked up #then it registers exactly once before task", () => {
+    // given
+    const names = createOmoSenpiComponents(taskComponent).map(({ name }) => name)
+
+    // when
+    const occurrences = names.filter((name) => name === "remote")
+    const remoteIndex = names.indexOf("remote")
+    const taskIndex = names.indexOf("task")
+
+    // then
+    expect(occurrences).toEqual(["remote"])
+    expect(remoteIndex).toBeLessThan(taskIndex)
+  })
+
   test("#given the production registration array #when ordering is inspected #then x-search registers after lsp and before task tool capture", () => {
     // given
     const names = createOmoSenpiComponents(taskComponent).map(({ name }) => name)

@@ -147,6 +147,8 @@ describe("Senpi compatibility test script", () => {
       await writeFile(toolkitShim, "#!/bin/sh\nexec node \"$(dirname \"$0\")/cli.js\" \"$@\"\n")
       await chmod(toolkitShim, 0o755)
       await writeFile(join(pluginRoot, "runtime", "agent-toolkit", "omo-agent-toolkit.cmd"), "@echo off\r\nnode \"%~dp0cli.js\" %*\r\n")
+      await mkdir(join(pluginRoot, "runtime", "remote"), { recursive: true })
+      await writeFile(join(pluginRoot, "runtime", "remote", "cli.js"), "console.log('remote')\n")
       await mkdir(join(pluginRoot, "runtime", "ast-grep-mcp"), { recursive: true })
       const astGrepRuntime = join(pluginRoot, "runtime", "ast-grep-mcp", "cli.js")
       const astGrepRuntimeContent = "console.log('ast-grep mcp')\n"
