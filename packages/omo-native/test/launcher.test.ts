@@ -315,7 +315,8 @@ describe("omo launcher", () => {
       for (const [label, args] of [
         ["install", ["install", "source"]], ["remove", ["remove", "source"]],
         ["list", ["list"]], ["config", ["config"]], ["auth", ["auth", "login"]],
-        ["app-server", ["app-server"]], ["update with flags", ["update", "--extensions"]],
+        ["app-server", ["app-server"]], ["a2a-server", ["a2a-server", "--listen", "http://127.0.0.1:41241"]],
+        ["update with flags", ["update", "--extensions"]],
         ["update with a source", ["update", "source"]],
       ] as const) {
         test(`#then ${label} passes through without an extension argument`, () => {

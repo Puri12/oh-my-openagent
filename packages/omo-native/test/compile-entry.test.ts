@@ -96,6 +96,12 @@ describe("compiled omo entry launcher parity", () => {
     expect(buildSenpiArgs(["install", "x"], "/provisioned")).toEqual(["install", "x"])
   })
 
+  test("a2a-server passes through without an extension", () => {
+    expect(buildSenpiArgs(["a2a-server", "--listen", "http://127.0.0.1:41241"], "/provisioned")).toEqual([
+      "a2a-server", "--listen", "http://127.0.0.1:41241",
+    ])
+  })
+
   test("main commands prepend the provisioned plugin extension", () => {
     expect(buildSenpiArgs(["chat"], "/provisioned")).toEqual(["--extension", join("/provisioned", "plugin"), "chat"])
   })
