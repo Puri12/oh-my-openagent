@@ -140,6 +140,10 @@ export async function runLauncher(args = process.argv.slice(2)) {
     await spawnNode(join(packageRoot, "plugin", "runtime", "agent-toolkit", "ulw-loop", "cli.js"), args.slice(1))
     return
   }
+  if (command === "remote") {
+    await spawnNode(join(packageRoot, "plugin", "runtime", "remote", "cli.js"), args.slice(1))
+    return
+  }
   if (command === "doctor") {
     runDoctor(await detectHarnesses(), args.slice(1))
     return

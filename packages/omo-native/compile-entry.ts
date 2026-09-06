@@ -49,6 +49,7 @@ const doctorArtifacts = [
   ["extension", "plugin/extensions/omo.js"],
   ["lsp-daemon runtime", "plugin/runtime/lsp-daemon/dist/cli.js"],
   ["agent-toolkit runtime", "plugin/runtime/agent-toolkit/cli.js"],
+  ["remote runtime", "plugin/runtime/remote/cli.js"],
 ] as const
 
 export function buildSenpiArgs(args: string[], execDir: string): string[] {
@@ -181,7 +182,7 @@ export function shouldPrintCompiledBanner(args: string[], stderrIsTTY: boolean):
   const command = args[0]
   if (command === undefined) return true
   if (earlyCommands.has(command)) return false
-  if (command === "update" || command === "doctor" || command === "setup" || command === "ulw-loop") return false
+  if (command === "update" || command === "doctor" || command === "setup" || command === "ulw-loop" || command === "remote") return false
   if (command === "--version" || command === "-v") return false
   return true
 }
@@ -192,6 +193,7 @@ export async function runCompiledLauncher(args: string[], execDir: string, engin
   adoptLegacyFlatState()
   const command = args[0]
   if (command === "ulw-loop") { spawn(process.execPath, [join(execDir, "plugin/runtime/agent-toolkit/ulw-loop/cli.js"), ...args.slice(1)], { stdio: "inherit" }); return true }
+  if (command === "remote") { spawn(process.execPath, [join(execDir, "plugin/runtime/remote/cli.js"), ...args.slice(1)], { stdio: "inherit" }); return true }
   if (command === "doctor") {
     const inventory = await detectHarnesses()
     if (compiledPackageRoot) runCompiledDoctor(inventory, compiledPackageRoot, enginePin)

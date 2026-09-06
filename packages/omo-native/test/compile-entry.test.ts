@@ -199,6 +199,8 @@ describe("pre-provisioning fast paths", () => {
     expect(shouldPrintCompiledBanner(["install", "x"], true)).toBe(false)
     expect(shouldPrintCompiledBanner(["--version"], true)).toBe(false)
     expect(shouldPrintCompiledBanner(["update"], true)).toBe(false)
+    expect(shouldPrintCompiledBanner(["ulw-loop"], true)).toBe(false)
+    expect(shouldPrintCompiledBanner(["remote"], true)).toBe(false)
     expect(shouldPrintCompiledBanner(["a2a-server"], true)).toBe(false)
   })
 })
@@ -302,7 +304,7 @@ describe("embedded runtime provisioning", () => {
   test("compiled doctor resolves package artifacts from the provided execDir", async () => {
     const root = temp()
     writeFileSync(join(root, "package.json"), JSON.stringify({ version: "9.2.1" }))
-    for (const artifact of ["plugin/package.json", "plugin/extensions/omo.js", "plugin/runtime/lsp-daemon/dist/cli.js", "plugin/runtime/agent-toolkit/cli.js"]) {
+    for (const artifact of ["plugin/package.json", "plugin/extensions/omo.js", "plugin/runtime/lsp-daemon/dist/cli.js", "plugin/runtime/agent-toolkit/cli.js", "plugin/runtime/remote/cli.js"]) {
       const path = join(root, artifact)
       mkdirSync(join(path, ".."), { recursive: true })
       writeFileSync(path, "fixture\n")

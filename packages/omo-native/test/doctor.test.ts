@@ -12,6 +12,7 @@ const artifacts = [
   ["extension", "plugin/extensions/omo.js"],
   ["lsp-daemon runtime", "plugin/runtime/lsp-daemon/dist/cli.js"],
   ["agent-toolkit runtime", "plugin/runtime/agent-toolkit/cli.js"],
+  ["remote runtime", "plugin/runtime/remote/cli.js"],
 ] as const
 
 type Fixture = { root: string; packageRoot: string; launcher: string; agentDir: string }

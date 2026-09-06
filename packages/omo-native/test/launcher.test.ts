@@ -113,6 +113,12 @@ import { writeFileSync } from "node:fs"
 writeFileSync(process.env.CAPTURE_FILE, JSON.stringify({ argv: process.argv.slice(2), target: "ulw-loop" }))
 process.exit(Number(process.env.FAKE_EXIT ?? 0))
 `)
+  const remoteRuntime = join(packageRoot, "plugin", "runtime", "remote")
+  writeFile(join(remoteRuntime, "cli.js"), `
+import { writeFileSync } from "node:fs"
+writeFileSync(process.env.CAPTURE_FILE, JSON.stringify({ argv: process.argv.slice(2), target: "remote" }))
+process.exit(Number(process.env.FAKE_EXIT ?? 0))
+`)
   const captureFile = join(root, "capture.json")
   return { root, packageRoot, launcher: join(packageRoot, "bin", "omo.js"), captureFile, shimPath }
 }
@@ -449,6 +455,22 @@ describe("omo launcher", () => {
         const result = run(fixture, ["ulw-loop", "status", "--json"])
         expect(result.status).toBe(0)
         expect(capture(fixture)).toMatchObject({ argv: ["status", "--json"], target: "ulw-loop" })
+      })
+    })
+
+    describe("#when remote is requested", () => {
+      test("#then the staged runtime CLI receives the remaining arguments", () => {
+        const fixture = createFixture()
+        const result = run(fixture, ["remote", "ls", "--json"])
+        expect(result.status).toBe(0)
+        expect(capture(fixture)).toMatchObject({ argv: ["ls", "--json"], target: "remote" })
+      })
+
+      test("#then remote does not receive an --extension argument", () => {
+        const fixture = createFixture()
+        const result = run(fixture, ["remote", "ls"])
+        expect(result.status).toBe(0)
+        expect(capture(fixture).argv).not.toContain("--extension")
       })
     })
 
