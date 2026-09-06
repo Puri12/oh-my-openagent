@@ -96,9 +96,9 @@ describe("compiled omo entry launcher parity", () => {
     expect(buildSenpiArgs(["install", "x"], "/provisioned")).toEqual(["install", "x"])
   })
 
-  test("a2a-server passes through without an extension", () => {
+  test("a2a-server appends the provisioned plugin extension", () => {
     expect(buildSenpiArgs(["a2a-server", "--listen", "http://127.0.0.1:41241"], "/provisioned")).toEqual([
-      "a2a-server", "--listen", "http://127.0.0.1:41241",
+      "a2a-server", "--listen", "http://127.0.0.1:41241", "--extension", join("/provisioned", "plugin"),
     ])
   })
 
@@ -199,6 +199,7 @@ describe("pre-provisioning fast paths", () => {
     expect(shouldPrintCompiledBanner(["install", "x"], true)).toBe(false)
     expect(shouldPrintCompiledBanner(["--version"], true)).toBe(false)
     expect(shouldPrintCompiledBanner(["update"], true)).toBe(false)
+    expect(shouldPrintCompiledBanner(["a2a-server"], true)).toBe(false)
   })
 })
 

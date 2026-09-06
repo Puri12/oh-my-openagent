@@ -53,6 +53,7 @@ const doctorArtifacts = [
 
 export function buildSenpiArgs(args: string[], execDir: string): string[] {
   const command = args[0]
+  if (command === "a2a-server") return [...args, "--extension", join(execDir, "plugin")]
   if (earlyCommands.has(command) || command === "update") return args
   return ["--extension", join(execDir, "plugin"), ...args]
 }

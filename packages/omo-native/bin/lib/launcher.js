@@ -93,7 +93,9 @@ async function spawnSenpi(args, withExtension) {
   const senpi = resolveSenpi()
   const finalArgs = withExtension
     ? ["--extension", join(packageRoot, "plugin"), ...args]
-    : args
+    : args[0] === "a2a-server"
+      ? [...args, "--extension", join(packageRoot, "plugin")]
+      : args
   await spawnNode(senpi.cliPath, finalArgs, { env: senpiEnvironment(senpi.packageRoot) })
 }
 

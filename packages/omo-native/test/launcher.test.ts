@@ -315,7 +315,7 @@ describe("omo launcher", () => {
       for (const [label, args] of [
         ["install", ["install", "source"]], ["remove", ["remove", "source"]],
         ["list", ["list"]], ["config", ["config"]], ["auth", ["auth", "login"]],
-        ["app-server", ["app-server"]], ["a2a-server", ["a2a-server", "--listen", "http://127.0.0.1:41241"]],
+        ["app-server", ["app-server"]],
         ["update with flags", ["update", "--extensions"]],
         ["update with a source", ["update", "source"]],
       ] as const) {
@@ -331,6 +331,15 @@ describe("omo launcher", () => {
           expect((captured.env.OMO_BIN ?? "").replace(/\\/g, "/")).toMatch(/\/bin\/omo\.js$/)
         })
       }
+
+      test("#then a2a-server passes through with the extension appended", () => {
+        const fixture = createFixture()
+        const args = ["a2a-server", "--listen", "http://127.0.0.1:41241"]
+        const result = run(fixture, args)
+        const captured = capture(fixture)
+        expect(result.status).toBe(0)
+        expect(captured.argv).toEqual([...args, "--extension", join(fixture.packageRoot, "plugin")])
+      })
     })
 
     describe("#when bare update is requested", () => {
