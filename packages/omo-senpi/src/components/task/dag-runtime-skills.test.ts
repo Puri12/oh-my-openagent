@@ -72,7 +72,7 @@ describe("createDagRuntime skill wiring", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
       loadSkills: (names) => ({
         prepend: names.length === 0 ? "" : "<skill name=\"shared\">\nSHARED BODY\n</skill>\n\n",
         resolved: names,

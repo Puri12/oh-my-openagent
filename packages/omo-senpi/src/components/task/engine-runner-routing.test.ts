@@ -57,13 +57,15 @@ function spyRunner(mode: ExecutionMode, pid: number | undefined): Spy {
   return { mode, specs, runner }
 }
 
-function composeWithSpies(): { inProcess: Spy; process: Spy; engine: ReturnType<typeof composeTaskEngine> } {
+function composeWithSpies(): { inProcess: Spy; process: Spy; remote: Spy; engine: ReturnType<typeof composeTaskEngine> } {
   const cwd = tempProject()
   const inProcess = spyRunner("in-process", undefined)
   const process = spyRunner("process", 4242)
+  const remote = spyRunner("remote", undefined)
   const runnerFactories: TaskRunnerFactories = {
     inProcess: () => inProcess.runner,
     process: () => process.runner,
+    remote: () => remote.runner,
   }
   const engine = composeTaskEngine({
     pi: new FakeExtensionAPI(),
@@ -72,7 +74,7 @@ function composeWithSpies(): { inProcess: Spy; process: Spy; engine: ReturnType<
     sharedParentTools: () => [],
     runnerFactories,
   })
-  return { inProcess, process, engine }
+  return { inProcess, process, remote, engine }
 }
 
 describe("task engine runner routing", () => {
@@ -121,6 +123,29 @@ describe("task engine runner routing", () => {
     // then only the in-process runner was used
     expect(result.kind).toBe("started")
     expect(inProcess.specs).toHaveLength(1)
+    expect(process.specs).toHaveLength(0)
+  })
+
+  it("#given a remote-mode spawn #when the manager launches #then the remote runner receives the spec with its requested host", async () => {
+    // given the engine wired with a distinct remote runner spy
+    const { inProcess, process, remote, engine } = composeWithSpies()
+
+    // when a task is started in remote execution mode naming a host
+    const result = await engine.manager.start({
+      prompt: "do the remote work",
+      parent_session_id: "session-a",
+      depth: 0,
+      execution_mode: "remote",
+      remote: "north",
+      model: "omo-mock/mock-1",
+      run_in_background: true,
+    })
+
+    // then only the remote runner was used, and it can see which host was requested
+    expect(result.kind).toBe("started")
+    expect(remote.specs).toHaveLength(1)
+    expect(remote.specs[0]?.remote).toBe("north")
+    expect(inProcess.specs).toHaveLength(0)
     expect(process.specs).toHaveLength(0)
   })
 })

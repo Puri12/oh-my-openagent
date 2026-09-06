@@ -92,7 +92,7 @@ function extensionOrderHarness() {
     omoConfig,
     cwd,
     sharedParentTools: () => [],
-    runnerFactories: { inProcess: () => runner, process: () => runner },
+    runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
   })
   const modelRegistry = createTeamServiceTestModelRegistry()
   engine.runtime.captureFrom({

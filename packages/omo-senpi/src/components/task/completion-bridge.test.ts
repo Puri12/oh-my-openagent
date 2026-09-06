@@ -61,7 +61,7 @@ function createHarness(): {
   const runner = pendingRunner()
   const manager = createTaskManager({
     store,
-    runners: { "in-process": runner, process: runner },
+    runners: { "in-process": runner, process: runner, remote: runner },
     planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
     config: OmoTaskSettingsSchema.parse({ default_concurrency: 5, max_depth: 1 }),
     cwd: backing.stateDir,

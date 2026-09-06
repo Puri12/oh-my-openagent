@@ -225,7 +225,7 @@ async function runtimeFixture(options: RuntimeFixtureOptions = {}): Promise<Runt
   const project = options.project ?? fs.mkdtempSync(join(tmpdir(), "omo-dag-lifecycle-"))
   if (options.project === undefined) cleanupRoots.push(project)
   const runner = options.runner ?? new ControlledRunner()
-  const runnerFactories: TaskRunnerFactories = { inProcess: () => runner, process: () => runner }
+  const runnerFactories: TaskRunnerFactories = { inProcess: () => runner, process: () => runner, remote: () => runner }
   const bus = rpcHarness()
   const pi = Object.assign(new FakeExtensionAPI(), { rpc: bus.api })
   const engine = composeTaskEngine({

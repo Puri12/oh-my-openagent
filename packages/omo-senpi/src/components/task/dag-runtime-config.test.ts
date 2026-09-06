@@ -94,7 +94,7 @@ describe("assembled DAG runtime configuration", () => {
       },
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     const sessionId = "session-configured-ring"
     engine.runtime.captureFrom({ sessionManager: { getSessionId: () => sessionId } })

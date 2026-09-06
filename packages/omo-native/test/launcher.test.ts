@@ -346,6 +346,14 @@ describe("omo launcher", () => {
         expect(result.status).toBe(0)
         expect(captured.argv).toEqual([...args, "--extension", join(fixture.packageRoot, "plugin")])
       })
+
+      test("#then a2a-server advertises the plugin version so remote clients can gate on it", () => {
+        const fixture = createFixture()
+        const result = run(fixture, ["a2a-server", "--listen", "http://127.0.0.1:41241"])
+        const captured = capture(fixture)
+        expect(result.status).toBe(0)
+        expect(captured.env.OMO_PLUGIN_VERSION).toBe("1.2.3-test.0")
+      })
     })
 
     describe("#when bare update is requested", () => {

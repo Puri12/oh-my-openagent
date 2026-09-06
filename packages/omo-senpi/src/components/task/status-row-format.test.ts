@@ -211,6 +211,28 @@ describe("formatTaskRow", () => {
     )
   })
 
+  it("#given a remote task with persisted host facts #when formatting #then the row carries mode:remote and the host name", () => {
+    const row = formatTaskRow(record({
+      task_id: "st_remote",
+      status: "running",
+      category: "quick",
+      execution_mode: "remote",
+      remote: { name: "north", url: "http://127.0.0.1:41241", task_id: "a2a-1", context_id: "ctx-1" },
+    }))
+    expect(row).toContain("mode:remote host:north")
+  })
+
+  it("#given a remote-mode task without persisted host facts #when formatting #then no host token is added", () => {
+    const row = formatTaskRow(record({
+      task_id: "st_remote_pending",
+      status: "running",
+      category: "quick",
+      execution_mode: "remote",
+    }))
+    expect(row).toContain("mode:remote status:running")
+    expect(row).not.toContain("host:")
+  })
+
   it("#given a description #when formatting #then the human label leads", () => {
     const row = formatTaskRow(record({
       task_id: "st_described",

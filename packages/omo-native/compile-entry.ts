@@ -83,7 +83,11 @@ export function updateLine(platform: NodeJS.Platform, arch: string): string {
   return `omo is updated via curl: curl -fsSL https://github.com/code-yeongyu/oh-my-openagent/releases/latest/download/${asset} -o ${dest} && chmod +x ${dest}`
 }
 
-export function remapSenpiEnvironment(source: NodeJS.ProcessEnv = process.env, execDir: string): NodeJS.ProcessEnv {
+export function remapSenpiEnvironment(
+  source: NodeJS.ProcessEnv = process.env,
+  execDir: string,
+  args: readonly string[] = [],
+): NodeJS.ProcessEnv {
   const env = { ...source }
   delete env.OMO_BIN
   delete env.SENPI_BIN
@@ -101,11 +105,13 @@ export function remapSenpiEnvironment(source: NodeJS.ProcessEnv = process.env, e
   env.OMO_NATIVE = "1"
   env.SENPI_RUNTIME = process.versions.bun ? "bun" : "node"
   let displayVersion = "unknown"
+  let packageVersion = "unknown"
   let devCommand: string | undefined
   let devUpdateCommand: string | undefined
   try {
     const stamped = readJson(join(execDir, "package.json")) as { version?: string; omoBuild?: unknown }
     displayVersion = typeof stamped.version === "string" ? stamped.version : "unknown"
+    packageVersion = displayVersion
     const info = parseBuildInfo(stamped.omoBuild)
     if (info !== undefined) {
       devCommand = info.command
@@ -126,6 +132,9 @@ export function remapSenpiEnvironment(source: NodeJS.ProcessEnv = process.env, e
     if (existsSync(shim)) env.SENPI_BIN = shim
   }
   env.OMO_BIN = join(execDir, process.platform === "win32" ? "omo.exe" : "omo")
+  // A2A clients (omo's remote execution mode) gate compatibility on the plugin version the server
+  // advertises in its agent card, so the server process must know which build it is serving.
+  if (args[0] === "a2a-server") env.OMO_PLUGIN_VERSION = packageVersion
   return env
 }
 
@@ -211,8 +220,9 @@ async function main(): Promise<void> {
   if (!embedded?.length) {
     const execDir = dirname(fileURLToPath(import.meta.url))
     if (await runCompiledLauncher(process.argv.slice(2), execDir)) return
-    process.argv.splice(2, process.argv.length - 2, ...buildSenpiArgs(process.argv.slice(2), execDir))
-    Object.assign(process.env, remapSenpiEnvironment(process.env, execDir))
+    const passthrough = process.argv.slice(2)
+    process.argv.splice(2, process.argv.length - 2, ...buildSenpiArgs(passthrough, execDir))
+    Object.assign(process.env, remapSenpiEnvironment(process.env, execDir, passthrough))
     await import("../../node_modules/@code-yeongyu/senpi/dist/cli.js") // literal: see import note above
     return
   }
@@ -247,8 +257,9 @@ async function main(): Promise<void> {
   if (shouldPrintCompiledBanner(process.argv.slice(2), process.stderr.isTTY === true)) {
     for (const line of compiledBannerLines(manifest)) console.error(line)
   }
-  process.argv.splice(2, process.argv.length - 2, ...buildSenpiArgs(process.argv.slice(2), execDir))
-  Object.assign(process.env, remapSenpiEnvironment(process.env, execDir))
+  const passthrough = process.argv.slice(2)
+  process.argv.splice(2, process.argv.length - 2, ...buildSenpiArgs(passthrough, execDir))
+  Object.assign(process.env, remapSenpiEnvironment(process.env, execDir, passthrough))
   await import("../../node_modules/@code-yeongyu/senpi/dist/cli.js") // literal: see import note above
 }
 

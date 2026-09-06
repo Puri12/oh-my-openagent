@@ -102,6 +102,15 @@ describe("compiled omo entry launcher parity", () => {
     ])
   })
 
+  test("a2a-server exports the plugin version remote clients gate on", () => {
+    const env = remapSenpiEnvironment({}, "/provisioned", ["a2a-server", "--listen", "http://127.0.0.1:41241"])
+    expect(env.OMO_PLUGIN_VERSION).toBe("unknown")
+  })
+
+  test("a non-a2a command leaves the plugin version unset", () => {
+    expect(remapSenpiEnvironment({}, "/provisioned", ["chat"]).OMO_PLUGIN_VERSION).toBeUndefined()
+  })
+
   test("main commands prepend the provisioned plugin extension", () => {
     expect(buildSenpiArgs(["chat"], "/provisioned")).toEqual(["--extension", join("/provisioned", "plugin"), "chat"])
   })

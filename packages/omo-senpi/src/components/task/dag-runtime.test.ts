@@ -223,7 +223,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     const widgetRows: string[][] = []
     engine.runtime.captureFrom({
@@ -293,7 +293,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     engine.runtime.captureFrom({ sessionManager: { getSessionId: () => "session-missing-skill" } })
     const runtime = createDagRuntime({ pi, engine, logger: logger() })
@@ -343,7 +343,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
       coordinator,
     })
     engine.runtime.captureFrom({
@@ -392,6 +392,7 @@ describe("assembled DAG runtime", () => {
     const runnerFactories: TaskRunnerFactories = {
       inProcess: () => runner,
       process: () => runner,
+      remote: () => runner,
     }
     const rpcEvents: Array<{ readonly name: string; readonly data: unknown }> = []
     const rpcHandlers = new Map<string, (data: unknown) => unknown | Promise<unknown>>()
@@ -570,7 +571,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     const sessionId = "session-abort-boundary"
     engine.runtime.captureFrom({ sessionManager: { getSessionId: () => sessionId } })
@@ -641,7 +642,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     engine.runtime.captureFrom({ sessionManager: { getSessionId: () => "session-old" } })
     const errors: string[] = []
@@ -695,7 +696,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     engine.runtime.captureFrom({ sessionManager: { getSessionId: () => "session-subscriber" } })
     const runtime = createDagRuntime({ pi, engine, logger: logger() })
@@ -736,7 +737,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => new ScriptedRunner(), process: () => new ScriptedRunner() },
+      runnerFactories: { inProcess: () => new ScriptedRunner(), process: () => new ScriptedRunner(), remote: () => new ScriptedRunner() },
     })
     firstEngine.runtime.captureFrom({ sessionManager: { getSessionId: () => sessionId } })
     const firstRuntime = createDagRuntime({ pi: firstPi, engine: firstEngine, logger: logger() })
@@ -764,7 +765,7 @@ describe("assembled DAG runtime", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => resumedRunner, process: () => resumedRunner },
+      runnerFactories: { inProcess: () => resumedRunner, process: () => resumedRunner, remote: () => resumedRunner },
     })
     resumedEngine.runtime.captureFrom({ sessionManager: { getSessionId: () => sessionId } })
     const resumedRuntime = createDagRuntime({ pi: resumedPi, engine: resumedEngine, logger: logger() })
@@ -822,7 +823,7 @@ describe("assembled DAG runtime", () => {
       },
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     engine.runtime.captureFrom({ sessionManager: { getSessionId: () => sessionId } })
     const runtime = createDagRuntime({ pi, engine, logger: logger() })
@@ -893,6 +894,7 @@ describe("dag runtime node spawn policy", () => {
     const runnerFactories: TaskRunnerFactories = {
       inProcess: () => runner,
       process: () => runner,
+      remote: () => runner,
     }
     const pi = new FakeExtensionAPI()
     const engine = composeTaskEngine({
@@ -988,7 +990,7 @@ describe("assembled DAG runtime control verbs", () => {
       omoConfig: loadOmoConfig({ cwd }).config,
       cwd,
       sharedParentTools: () => [],
-      runnerFactories: { inProcess: () => runner, process: () => runner },
+      runnerFactories: { inProcess: () => runner, process: () => runner, remote: () => runner },
     })
     engine.runtime.captureFrom({ sessionManager: { getSessionId: () => sessionId } })
     const runtime = createDagRuntime({ pi, engine, logger: logger() })

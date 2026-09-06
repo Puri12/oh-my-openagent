@@ -215,7 +215,11 @@ export function composeTaskEngine(deps: ComposeTaskEngineDeps): TaskEngine {
   })
   const manager = createTaskManager({
     store: storeChain.store,
-    runners: { "in-process": factories.inProcess(runnerContext), process: factories.process(runnerContext) },
+    runners: {
+      "in-process": factories.inProcess(runnerContext),
+      process: factories.process(runnerContext),
+      remote: factories.remote(runnerContext),
+    },
     planner,
     config: settings,
     cwd: deps.cwd,

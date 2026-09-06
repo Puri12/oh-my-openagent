@@ -96,7 +96,11 @@ async function spawnSenpi(args, withExtension) {
     : args[0] === "a2a-server"
       ? [...args, "--extension", join(packageRoot, "plugin")]
       : args
-  await spawnNode(senpi.cliPath, finalArgs, { env: senpiEnvironment(senpi.packageRoot) })
+  const env = senpiEnvironment(senpi.packageRoot)
+  // A2A clients (omo's remote execution mode) gate compatibility on the plugin version the server
+  // advertises in its agent card, so the server process must know which build it is serving.
+  if (args[0] === "a2a-server") env.OMO_PLUGIN_VERSION = packageManifest().version
+  await spawnNode(senpi.cliPath, finalArgs, { env })
 }
 
 function isInteractiveDefault(args) {

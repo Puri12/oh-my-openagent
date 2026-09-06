@@ -73,7 +73,11 @@ export function formatTaskRow(record: TaskRecord): string {
   const parts = [identity]
   if (identity !== normalizeRendererText(record.task_id)) parts.push(`(${normalizeRendererText(record.task_id)})`)
   parts.push(recordStatusTarget(record))
-  parts.push(`mode:${normalizeRendererText(record.execution_mode)}`, `status:${statusLabel(record)}`)
+  parts.push(`mode:${normalizeRendererText(record.execution_mode)}`)
+  // A remote child runs on another omo host; naming it is the difference between "running somewhere"
+  // and an actionable row. Absent until the host acknowledges the task.
+  if (record.remote !== undefined) parts.push(`host:${normalizeRendererText(record.remote.name)}`)
+  parts.push(`status:${statusLabel(record)}`)
   if (record.pid !== undefined) parts.push(`pid:${record.pid}`)
   const progress = progressHead(record)
   if (progress !== undefined) parts.push(`progress:${progress}`)

@@ -70,7 +70,7 @@ function fixture(): Fixture {
   const project = mkdtempSync(join(tmpdir(), "omo-senpi-engine-terminal-"))
   roots.push(project)
   const runner = new ScriptedRunner()
-  const runnerFactories: TaskRunnerFactories = { inProcess: () => runner, process: () => runner }
+  const runnerFactories: TaskRunnerFactories = { inProcess: () => runner, process: () => runner, remote: () => runner }
   const observers = createTaskTerminalObservers()
   const edges: TaskTerminalEdge[] = []
   observers.subscribe((edge) => edges.push(edge))
