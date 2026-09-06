@@ -27,6 +27,7 @@ function createManager() {
     runners: {
       "in-process": new FakeRunner(),
       process: createRpcManagedRunner(processRunner),
+      remote: new FakeRunner(),
     },
     planner: categoryPlanner(),
     config: settings({ default_execution_mode: "process", default_concurrency: 2, max_depth: 2 }),

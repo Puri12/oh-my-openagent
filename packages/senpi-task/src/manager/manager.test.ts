@@ -68,7 +68,7 @@ function makeLifecycleManager(runner: ManagedRunner, config = settings({ default
   const lifecycle = createTaskLifecycle({ store, registry, config })
   const manager = createTaskManager({
     store,
-    runners: { "in-process": runner, process: runner },
+    runners: { "in-process": runner, process: runner, remote: runner },
     planner: categoryPlanner(),
     config,
     cwd: project,
@@ -477,7 +477,7 @@ describe("TaskManager pending cancellation", () => {
     const config = settings({ default_concurrency: 1, max_depth: 1 })
     const manager = createTaskManager({
       store,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config,
       cwd: project,

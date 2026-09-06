@@ -32,5 +32,11 @@ export type {
   TaskToolMode,
 } from "./types"
 export { evaluateSpawnPolicy, type SpawnPolicyVerdict } from "./spawn-policy"
-export { validateTaskTarget } from "./validation"
-export type { TaskTargetError, TaskTargetErrorCode, TaskTargetSelection } from "./validation"
+export { validateRemoteRouting, validateTaskTarget } from "./validation"
+export type {
+  RemoteRoutingError,
+  RemoteRoutingVerdict,
+  TaskTargetError,
+  TaskTargetErrorCode,
+  TaskTargetSelection,
+} from "./validation"

@@ -57,7 +57,7 @@ function makeZeroCapManager(): TaskManager {
   const lifecycle = createTaskLifecycle({ store, registry, config })
   managerRef = createTaskManager({
     store,
-    runners: { "in-process": runner, process: runner },
+    runners: { "in-process": runner, process: runner, remote: runner },
     planner: categoryPlanner(),
     config,
     cwd: project,

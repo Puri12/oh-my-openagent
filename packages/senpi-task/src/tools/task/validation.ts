@@ -34,6 +34,7 @@ type SpawnParamsInput = TargetInput & {
   readonly description?: string
   readonly name?: string
   readonly model?: string
+  readonly remote?: string
   readonly load_skills?: readonly string[]
   readonly run_in_background?: boolean
   readonly tasks?: readonly SpawnItemInput[]
@@ -69,6 +70,34 @@ export type RunInBackgroundConflictError = {
 export type RunInBackgroundResolution =
   | { readonly kind: "ok"; readonly runInBackground: boolean | undefined }
   | { readonly kind: "error"; readonly error: RunInBackgroundConflictError }
+
+export type RemoteRoutingError = {
+  readonly code: "remote_execution_mode_conflict"
+  readonly message: string
+}
+
+export type RemoteRoutingVerdict =
+  | { readonly kind: "ok" }
+  | { readonly kind: "error"; readonly error: RemoteRoutingError }
+
+const REMOTE_EXECUTION_MODE_CONFLICT_MESSAGE =
+  "remote runs the task on another omo host, so its execution mode is always \"remote\". Drop execution_mode (or set it to \"remote\") and retry."
+
+// `remote` pairs freely with category or subagent_type - the remote host runs the same agent - but
+// it fixes the execution mode, so an explicit local mode alongside it is a contradiction, not a
+// silent override.
+export function validateRemoteRouting(params: {
+  readonly remote?: string
+  readonly execution_mode?: string
+  readonly subagent_type?: string
+}): RemoteRoutingVerdict {
+  if (!present(params.remote)) return { kind: "ok" }
+  if (params.execution_mode === undefined || params.execution_mode === "remote") return { kind: "ok" }
+  return {
+    kind: "error",
+    error: { code: "remote_execution_mode_conflict", message: REMOTE_EXECUTION_MODE_CONFLICT_MESSAGE },
+  }
+}
 
 const BOTH_TARGETS_MESSAGE = "Provide EITHER category OR subagent_type, not both. Remove one and retry."
 
@@ -193,6 +222,7 @@ export function resolveSpawnItems(params: SpawnParamsInput): ResolveSpawnItemsRe
     const common = {
       prompt: input.prompt,
       load_skills: input.load_skills ?? params.load_skills ?? [],
+      ...(present(params.remote) ? { remote: params.remote.trim() } : {}),
       ...(input.task_summary === undefined ? {} : { task_summary: input.task_summary }),
       ...(input.description === undefined ? {} : { description: input.description }),
       ...(input.name === undefined ? {} : { name: input.name }),

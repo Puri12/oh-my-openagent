@@ -14,7 +14,7 @@ function buildCollisionExecute() {
   const inner = createTaskRecordStore({ project_dir: project })
   const manager = createTaskManager({
     store: collisionStore(inner).store,
-    runners: { "in-process": new FakeRunner(), process: new FakeRunner() },
+    runners: { "in-process": new FakeRunner(), process: new FakeRunner(), remote: new FakeRunner() },
     planner: categoryPlanner(),
     config: settings({ default_concurrency: 5, max_depth: 1 }),
     cwd: project,

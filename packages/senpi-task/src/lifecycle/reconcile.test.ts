@@ -120,7 +120,7 @@ function createManager(
   const inProcess = new FakeRunner()
   const manager = createTaskManager({
     store,
-    runners: { "in-process": inProcess, process: processRunner },
+    runners: { "in-process": inProcess, process: processRunner, remote: processRunner },
     planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
     config: settings({ default_concurrency: defaultConcurrency }),
     cwd: "/tmp/project",
@@ -452,7 +452,7 @@ describe("reconcileOnSessionStart reattach", () => {
     const inProcess = new FakeRunner()
     createTaskManager({
       store,
-      runners: { "in-process": inProcess, process: inProcess },
+      runners: { "in-process": inProcess, process: inProcess, remote: inProcess },
       planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
       config: settings(),
       cwd: "/tmp/project",
@@ -495,7 +495,7 @@ describe("reconcileOnSessionStart reattach", () => {
     const inProcess = new FakeRunner()
     createTaskManager({
       store,
-      runners: { "in-process": inProcess, process: inProcess },
+      runners: { "in-process": inProcess, process: inProcess, remote: inProcess },
       planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
       config: settings(),
       cwd: "/tmp/project",

@@ -82,7 +82,7 @@ export function buildChaosEngines(input: {
     }
     managerRef = createTaskManager({
       store: input.store,
-      runners: { "in-process": inProcessRunner, process: processRunner },
+      runners: { "in-process": inProcessRunner, process: processRunner, remote: processRunner },
       planner: singleModelPlanner(input.model), config: input.config, cwd: input.project,
       now: input.clock, destruction,
       admit: async (parentSessionId) => {

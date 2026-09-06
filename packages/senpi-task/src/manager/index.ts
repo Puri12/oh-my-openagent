@@ -16,11 +16,12 @@ export {
   subscribeTranscriptLog,
 } from "./transcript-log"
 export type { TranscriptLogStore } from "./transcript-log"
-export { createInProcessManagedRunner, createRpcManagedRunner } from "./runner"
+export { createInProcessManagedRunner, createRemoteManagedRunner, createRpcManagedRunner } from "./runner"
 export type {
   InProcessRunnerLike,
   InProcessSessionContext,
   InProcessSessionContextProvider,
+  RemoteRunnerLike,
   RpcRunnerLike,
 } from "./runner"
 export { createParentRegistrySessionContext, findModelReference } from "./parent-registry-context"

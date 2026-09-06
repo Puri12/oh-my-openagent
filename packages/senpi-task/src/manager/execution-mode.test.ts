@@ -36,6 +36,17 @@ describe("resolveExecutionMode", () => {
     expect(mode).toBe("process")
   })
 
+  test("#given a remote spec mode #when resolved #then remote wins over the local agent and config modes", () => {
+    // given
+    const sources = { specMode: "remote" as const, agentMode: "in-process" as const, configMode: "process" as const }
+
+    // when
+    const mode = resolveExecutionMode(sources)
+
+    // then
+    expect(mode).toBe("remote")
+  })
+
   test("#given no source at all #when resolved #then it falls back to in-process", () => {
     // given
     const sources = {}

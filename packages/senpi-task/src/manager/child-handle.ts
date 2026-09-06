@@ -1,5 +1,6 @@
 import type { ChildHandle as InProcessChildHandle, RunnerOutcome } from "../runners/in-process/child-handle"
 import { mapExitOutcomeToError } from "../runners/rpc/exit-mapping"
+import type { RemoteFacts } from "../runners/remote/types"
 import type { RpcChildHandle, RpcEntriesResult, RpcSpawnSpec, RpcSwitchSessionResult } from "../runners/types"
 
 export type { RunnerOutcome } from "../runners/in-process/child-handle"
@@ -29,6 +30,9 @@ export type ManagedChildHandle = {
   readonly sessionId: string | undefined
   readonly pid: number | undefined
   readonly spawnSpec?: RpcSpawnSpec
+  // Remote handles expose the host and A2A ids their task lives on so the manager can persist them
+  // for reattach; every other runner omits it.
+  remoteFacts?(): RemoteFacts | undefined
   steer(text: string): Promise<void>
   followUp(text: string): Promise<void>
   abort(): Promise<void>

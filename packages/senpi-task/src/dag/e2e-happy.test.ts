@@ -182,7 +182,7 @@ function e2eFixture(options: { readonly admit?: AdmitResident; readonly runner?:
   const activeRunner = options.runner ?? runner
   const taskManager = createTaskManager({
     store: taskStore,
-    runners: { "in-process": activeRunner, process: activeRunner },
+    runners: { "in-process": activeRunner, process: activeRunner, remote: activeRunner },
     planner,
     config: OmoTaskSettingsSchema.parse({ default_concurrency: 16, max_depth: 1 }),
     cwd: project,

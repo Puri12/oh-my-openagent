@@ -92,11 +92,13 @@ export function normalizeTaskToolArguments(raw: unknown): TaskToolParamsStatic {
   const subagentType = identifier(raw.subagent_type)
   const name = identifier(raw.name)
   const model = identifier(raw.model)
+  const remote = identifier(raw.remote)
   const loadSkills = stringList(raw.load_skills)
   const runInBackground = booleanFlag(raw.run_in_background)
 
   return {
     ...(prompt === undefined ? {} : { prompt }),
+    ...(remote === undefined ? {} : { remote }),
     ...(taskSummary === undefined ? {} : { task_summary: taskSummary }),
     ...(description === undefined ? {} : { description }),
     ...(category === undefined ? {} : { category }),

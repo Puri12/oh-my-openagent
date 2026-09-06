@@ -288,7 +288,7 @@ function e2eFixture(options: E2eFixtureOptions = {}): E2eFixture {
   const runner = options.runner ?? new ImmediateRunner()
   const taskManager = resultPersistingManager(createTaskManager({
     store: taskStore,
-    runners: { "in-process": runner, process: options.processRunner ?? runner },
+    runners: { "in-process": runner, process: options.processRunner ?? runner, remote: options.processRunner ?? runner },
     planner: options.childPlanner ?? planner,
     config: OmoTaskSettingsSchema.parse({
       default_concurrency: options.defaultConcurrency ?? 16,
@@ -558,7 +558,7 @@ describe("DAG failure, crash, and policy end to end", () => {
     const recoveredRunner = new ImmediateRunner()
     const recoveredTaskManager = resultPersistingManager(createTaskManager({
       store: createTaskRecordStore({ project_dir: project }),
-      runners: { "in-process": recoveredRunner, process: recoveredRunner },
+      runners: { "in-process": recoveredRunner, process: recoveredRunner, remote: recoveredRunner },
       planner,
       config: OmoTaskSettingsSchema.parse({ default_concurrency: 16, max_depth: 1 }),
       cwd: project,

@@ -3,6 +3,7 @@ import {
   type PendingSteeringEntry,
   type ResolvedModelRecord,
   type TaskNotification,
+  type TaskRemoteRecord,
   type TaskSpawnSpec,
 } from "../state"
 import type { DagTaskOwner } from "../dag/owner"
@@ -54,6 +55,18 @@ export function parseOptionalSpawnSpec(record: Record<string, unknown>): TaskSpa
 
   // Legacy: only cwd survives; extensions/member_env are untrusted launch inputs, never persisted.
   return { cwd: readString(value, "cwd") }
+}
+
+export function parseOptionalRemote(record: Record<string, unknown>): TaskRemoteRecord | undefined {
+  const value = record["remote"]
+  if (value === undefined) return undefined
+  if (!isRecord(value)) throw new Error("remote is not an object")
+  return {
+    name: readString(value, "name"),
+    url: readString(value, "url"),
+    task_id: readString(value, "task_id"),
+    context_id: readString(value, "context_id"),
+  }
 }
 
 export function parseOptionalPendingSteering(

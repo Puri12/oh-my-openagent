@@ -131,7 +131,7 @@ async function givenTeamWithSuspendedMember() {
   const respawnRunner = new FakeRespawnRunner()
   createTaskManager({
     store,
-    runners: { "in-process": new FakeRunner(), process: new FakeRunner() },
+    runners: { "in-process": new FakeRunner(), process: new FakeRunner(), remote: new FakeRunner() },
     planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
     config: settings(),
     cwd: "/tmp/project",

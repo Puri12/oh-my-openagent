@@ -123,7 +123,7 @@ describe("task_send lazy terminal RPC revival", () => {
     let starts = 0
     const manager = createTaskManager({
       store,
-      runners: { "in-process": new FakeRunner(), process: new FakeRunner() },
+      runners: { "in-process": new FakeRunner(), process: new FakeRunner(), remote: new FakeRunner() },
       planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
       config: settings(),
       cwd: project,
@@ -155,7 +155,7 @@ describe("task_send lazy terminal RPC revival", () => {
     const lifecycle = createTaskLifecycle({ store, registry: new FakeRegistry(), config: settings() })
     const manager = createTaskManager({
       store,
-      runners: { "in-process": new FakeRunner(), process: new FakeRunner() },
+      runners: { "in-process": new FakeRunner(), process: new FakeRunner(), remote: new FakeRunner() },
       planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
       config: settings(),
       cwd: project,
@@ -230,7 +230,7 @@ describe("task_send lazy terminal RPC revival", () => {
     let respawns = 0
     const manager = createTaskManager({
       store,
-      runners: { "in-process": new FakeRunner(), process: processRunner },
+      runners: { "in-process": new FakeRunner(), process: processRunner, remote: processRunner },
       planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
       config: settings({ default_concurrency: 1, global_concurrency: 1 }),
       cwd: project,

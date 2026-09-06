@@ -69,7 +69,7 @@ describe.each(cleanupStages)("TaskManager respawn %s cleanup", (cleanupStage) =>
     const runner = new FakeRunner()
     const manager = createTaskManager({
       store,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -129,7 +129,7 @@ describe("TaskManager respawn launch trust boundary", () => {
     const runner = new FakeRunner()
     const manager = createTaskManager({
       store,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -198,7 +198,7 @@ describe("TaskManager team-member respawn", () => {
     const runner = new FakeRunner()
     const options = {
       store,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -261,7 +261,7 @@ describe("TaskManager respawn variant", () => {
     const runner = new FakeRunner()
     const manager = createTaskManager({
       store,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -322,7 +322,7 @@ describe("TaskManager in-process respawn", () => {
     }
     const manager = createTaskManager({
       store,
-      runners: { "in-process": inProcessRunner, process: new FakeRunner() },
+      runners: { "in-process": inProcessRunner, process: new FakeRunner(), remote: new FakeRunner() },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -373,7 +373,7 @@ describe("TaskManager in-process respawn", () => {
     }, createParentRegistrySessionContext(() => undefined))
     const manager = createTaskManager({
       store,
-      runners: { "in-process": managedRunner, process: new FakeRunner() },
+      runners: { "in-process": managedRunner, process: new FakeRunner(), remote: new FakeRunner() },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -407,7 +407,7 @@ describe("TaskManager in-process respawn", () => {
     }
     const manager = createTaskManager({
       store,
-      runners: { "in-process": runner, process: new FakeRunner() },
+      runners: { "in-process": runner, process: new FakeRunner(), remote: new FakeRunner() },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -437,7 +437,7 @@ describe("TaskManager guarded reattach", () => {
     store.replace(record)
     const manager = createTaskManager({
       store,
-      runners: { "in-process": new FakeRunner(), process: new FakeRunner() },
+      runners: { "in-process": new FakeRunner(), process: new FakeRunner(), remote: new FakeRunner() },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -467,7 +467,7 @@ describe("TaskManager guarded reattach", () => {
     store.replace(record)
     const manager = createTaskManager({
       store,
-      runners: { "in-process": new FakeRunner(), process: new FakeRunner() },
+      runners: { "in-process": new FakeRunner(), process: new FakeRunner(), remote: new FakeRunner() },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -502,7 +502,7 @@ describe("TaskManager guarded reattach", () => {
     store.replace(record)
     const manager = createTaskManager({
       store,
-      runners: { "in-process": new FakeRunner(), process: new FakeRunner() },
+      runners: { "in-process": new FakeRunner(), process: new FakeRunner(), remote: new FakeRunner() },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,
@@ -554,7 +554,7 @@ describe("TaskManager respawn continuation", () => {
     const runner = new FakeRunner()
     const manager = createTaskManager({
       store,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings(),
       cwd: project,

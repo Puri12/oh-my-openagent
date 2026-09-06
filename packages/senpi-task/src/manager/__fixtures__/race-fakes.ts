@@ -108,7 +108,7 @@ export function makeRaceHarness(flavor: RaceFlavor): RaceHarness {
   const runner = new RaceRunner(flavor)
   const manager = createTaskManager({
     store,
-    runners: { "in-process": runner, process: runner },
+    runners: { "in-process": runner, process: runner, remote: runner },
     planner: categoryPlanner(),
     config: settings({ default_concurrency: 5, max_depth: 1 }),
     cwd: project,

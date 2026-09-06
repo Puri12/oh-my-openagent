@@ -44,7 +44,7 @@ async function failForFallback(handle: ReturnType<FakeRunner["handles"]["get"]>)
 function managerWithStore(store: TaskRecordStore, runner: FakeRunner) {
   return createTaskManager({
     store,
-    runners: { "in-process": runner, process: new FakeRunner() },
+    runners: { "in-process": runner, process: new FakeRunner(), remote: new FakeRunner() },
     planner: categoryPlanner(),
     config: settings({ default_concurrency: 1, max_depth: 1 }),
     cwd: tempProject(),

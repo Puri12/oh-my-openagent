@@ -35,7 +35,8 @@ import {
 import { createOutcomeTracker, type OutcomeTracker } from "./manager-outcome"
 import { claimTaskRecord, TaskRecordCollisionError } from "../store"
 import { withTaskRecordLockAsync } from "../store/record-lock"
-import { reattachManagedTask, respawnManagedTask } from "./manager-respawn"
+import { reattachManagedTask } from "./manager-reattach"
+import { respawnManagedTask } from "./manager-respawn"
 import { NameRegistry } from "./names"
 import { TaskSequence } from "./task-sequence"
 import { createRunStatsTracker, type RunStatsTracker } from "../run-stats"
@@ -711,13 +712,20 @@ class TaskManagerImpl implements TaskManager {
     const current = this.#tryLoad(taskId)
     if (current === null || isTerminalRecord(current)) return
     const withPid = recordSpawnedPid(current, handle.pid) ?? current
+    const remote = handle.remoteFacts?.()
+    const withRemote: TaskRecord = remote === undefined
+      ? withPid
+      : {
+          ...withPid,
+          remote: { name: remote.name, url: remote.url, task_id: remote.taskId, context_id: remote.contextId },
+        }
     const spawnSpec = handle.spawnSpec
     // A v1 spawn_spec persisted at spawn is authoritative: the rpc echo would rewrite it as the
     // legacy {cwd, extensions, member_env} shape, dropping the rebuild facts v1 carries.
     const updated: TaskRecord = spawnSpec === undefined || (current.spawn_spec !== undefined && isSpawnSpecV1(current.spawn_spec))
-      ? withPid
+      ? withRemote
       : {
-          ...withPid,
+          ...withRemote,
           spawn_spec: {
             cwd: spawnSpec.cwd,
             ...(spawnSpec.extensions === undefined ? {} : { extensions: spawnSpec.extensions }),

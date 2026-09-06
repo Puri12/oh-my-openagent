@@ -36,6 +36,10 @@ export type ManagedStartSpec = {
   readonly resolvedModel?: ResolvedModelRecord
   readonly variant?: string
   readonly agentType?: string
+  // Routing inputs for the remote execution mode: the requested remote name (or "auto") and the
+  // task's category, which the remote selector matches against each host's declared categories.
+  readonly remote?: string
+  readonly category?: string
   readonly instructions?: string
   readonly toolAllowlist?: readonly string[]
   // Names of tools the child must NOT get (the agent definition's disallowedTools), applied through
@@ -65,6 +69,8 @@ export type ManagerStartSpec = {
   readonly category?: string
   readonly subagent_type?: string
   readonly execution_mode?: ExecutionMode
+  // Remote host name from the task tool's `remote` param, or "auto" to route by category.
+  readonly remote?: string
   readonly model?: string
   readonly name?: string
   readonly description?: string

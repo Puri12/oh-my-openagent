@@ -29,6 +29,12 @@ export type RunnerFailure = {
     | "model_unavailable"
     | "tools_unavailable"
     | "session_unavailable"
+    // Remote (A2A) execution mode: no host could take the task, the chosen host runs an
+    // incompatible omo plugin, or the remote task ended FAILED / REJECTED.
+    | "remote_unavailable"
+    | "remote_incompatible"
+    | "remote_failed"
+    | "remote_rejected"
   readonly message: string
   readonly cause?: unknown
 }

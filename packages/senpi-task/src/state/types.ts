@@ -178,6 +178,15 @@ export type TaskRecordInput = {
   readonly background_mode?: BackgroundMode
 }
 
+// Reattach facts for a task delegated to a remote omo over A2A: which host owns it and the A2A
+// task/context ids a restarted process needs to resubscribe instead of respawning the work.
+export type TaskRemoteRecord = {
+  readonly name: string
+  readonly url: string
+  readonly task_id: string
+  readonly context_id: string
+}
+
 export type TaskRecord = TaskRecordInput & {
   readonly task_id: string
   readonly status: TaskStatus
@@ -194,6 +203,7 @@ export type TaskRecord = TaskRecordInput & {
   readonly host_pid?: number
   readonly child_session_id?: string
   readonly spawn_spec?: TaskSpawnSpec
+  readonly remote?: TaskRemoteRecord
   readonly final_response?: string
   readonly error_message?: string
   // Set true when the terminal error was an external kill / exit-by-signal (todo-8 kill contract); a

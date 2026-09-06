@@ -43,7 +43,7 @@ describe("TaskManager.startOwned", () => {
     const runner = new FakeRunner()
     const manager = createTaskManager({
       store,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings({ default_concurrency: 5, max_depth: 1 }),
       cwd: project,
@@ -75,14 +75,14 @@ describe("TaskManager.startOwned", () => {
     const firstStore = createTaskRecordStore({ project_dir: project })
     const firstManager = createTaskManager({
       store: firstStore,
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings({ default_concurrency: 5, max_depth: 1 }),
       cwd: project,
     })
     const secondManager = createTaskManager({
       store: createTaskRecordStore({ project_dir: project }),
-      runners: { "in-process": runner, process: runner },
+      runners: { "in-process": runner, process: runner, remote: runner },
       planner: categoryPlanner(),
       config: settings({ default_concurrency: 5, max_depth: 1 }),
       cwd: project,

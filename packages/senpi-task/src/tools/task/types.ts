@@ -75,6 +75,8 @@ type ResolvedSpawnItemBase = {
   readonly description?: string
   readonly name?: string
   readonly model?: string
+  // Batch-wide remote routing: every item of one task call runs on the same requested host.
+  readonly remote?: string
   readonly load_skills: readonly string[]
 }
 

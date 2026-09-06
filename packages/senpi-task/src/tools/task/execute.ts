@@ -8,7 +8,13 @@ import type { ForegroundWaitOptions } from "./foreground-wait"
 import { evaluateSpawnPolicy } from "./spawn-policy"
 import type { TaskToolParamsStatic } from "./params"
 import type { ResolvedSpawnItem, TaskSkillSummary, TaskToolContext, TaskToolDeps, TaskToolDetails } from "./types"
-import { resolveRunInBackground, resolveSpawnItems, validateBatchShape, validateTaskTarget } from "./validation"
+import {
+  resolveRunInBackground,
+  resolveSpawnItems,
+  validateBatchShape,
+  validateRemoteRouting,
+  validateTaskTarget,
+} from "./validation"
 
 type TaskExecute = (
   toolCallId: string,
@@ -30,6 +36,9 @@ export function buildTaskExecute(deps: TaskToolDeps, options: ForegroundWaitOpti
   return async (_toolCallId, params, signal, onUpdate, ctx) => {
     const shape = validateBatchShape(params)
     if (shape.kind === "error") return invalidArguments(shape.error.message)
+
+    const routing = validateRemoteRouting(params)
+    if (routing.kind === "error") return invalidArguments(routing.error.message)
 
     const background = resolveRunInBackground(params)
     if (background.kind === "error") return invalidArguments(background.error.message)

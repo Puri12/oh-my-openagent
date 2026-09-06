@@ -11,6 +11,7 @@ import {
   parseOptionalOwner,
   parseOptionalPendingSteering,
   parseOptionalResolvedModel,
+  parseOptionalRemote,
   parseOptionalResolvedModelArray,
   parseOptionalSpawnSpec,
 } from "./record-blocks-parse"
@@ -53,6 +54,7 @@ export function parseTaskRecord(value: unknown, path: string, warnings?: string[
   const fallbackAttempts = parseOptionalResolvedModelArray(value, "fallback_attempts")
   const resolvedModel = parseOptionalResolvedModel(value, "resolved_model")
   const spawnSpec = parseOptionalSpawnSpec(value)
+  const remote = parseOptionalRemote(value)
   const owner = parseOptionalOwner(value)
   const pendingSteering = parseOptionalPendingSteering(value, path, warnings)
   const runStats = value["run_stats"] === undefined ? undefined : parseRunStats(value["run_stats"])
@@ -89,6 +91,7 @@ export function parseTaskRecord(value: unknown, path: string, warnings?: string[
     ...(fallbackAttempts === undefined ? {} : { fallback_attempts: fallbackAttempts }),
     ...(resolvedModel === undefined ? {} : { resolved_model: resolvedModel }),
     ...(spawnSpec === undefined ? {} : { spawn_spec: spawnSpec }),
+    ...(remote === undefined ? {} : { remote }),
     ...(owner === undefined ? {} : { owner }),
     ...(pendingSteering !== undefined && pendingSteering.length > 0 ? { pending_steering: pendingSteering } : {}),
     ...(pid === undefined ? {} : { pid }),

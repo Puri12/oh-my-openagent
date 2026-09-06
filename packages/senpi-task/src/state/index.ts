@@ -22,6 +22,7 @@ export type {
   TaskNotification,
   TaskRecord,
   TaskRecordInput,
+  TaskRemoteRecord,
   TaskRunStats,
   TaskSpawnSpec,
   TaskStatus,

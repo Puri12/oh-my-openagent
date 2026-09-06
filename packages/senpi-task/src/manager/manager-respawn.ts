@@ -2,14 +2,14 @@ import { join } from "node:path"
 
 import { log } from "@oh-my-opencode/utils"
 
-import type { ReattachResult, RespawnFailureCode, RespawnResult } from "../lifecycle/port"
+import type { RespawnFailureCode, RespawnResult } from "../lifecycle/port"
 import { RunnerError } from "../runners/in-process/runner-error"
+import type { RemoteFacts } from "../runners/remote/types"
 import type { RpcChildHandle, RpcRunnerSpec } from "../runners/types"
 import type { TaskRecord } from "../state"
-import type { TaskRecordStore } from "../store"
 import { adaptRpcHandle, discardManagedHandle, discardRpcHandle, type ManagedChildHandle } from "./child-handle"
 import { sessionTailNeedsContinuation } from "./interrupted-turn"
-import { buildRespawnManagedSpec, isTerminalRecord, nowIso } from "./manager-helpers"
+import { buildRespawnManagedSpec, isTerminalRecord } from "./manager-helpers"
 import type { ManagedRunner, TrustedRespawnLaunchResolver } from "./types"
 
 const CONTINUATION_MESSAGE =
@@ -18,23 +18,56 @@ const RESPAWN_CLEANUP_FAILURE_REASON = "rpc respawn cleanup failed"
 
 type RpcRespawnRunner = { start(spec: RpcRunnerSpec): Promise<RpcChildHandle> }
 
+// The seam the RemoteRunner exposes for reattach; other ManagedRunners simply omit it.
+type RemoteReattachRunner = { reattach(facts: RemoteFacts, taskId: string): ManagedChildHandle }
+
+function hasRemoteReattach(runner: ManagedRunner): runner is ManagedRunner & RemoteReattachRunner {
+  return typeof (runner as Partial<RemoteReattachRunner>).reattach === "function"
+}
+
 export async function respawnManagedTask(input: {
   readonly record: TaskRecord
   readonly sessionPath: string | undefined
   readonly stateDir: string
-  readonly runners: Readonly<Record<"in-process" | "process", ManagedRunner>>
+  readonly runners: Readonly<Record<"in-process" | "process" | "remote", ManagedRunner>>
   readonly rpcRunner: RpcRespawnRunner
   readonly trustedLaunch?: TrustedRespawnLaunchResolver
 }): Promise<RespawnResult> {
+  // A remote child lives in another process entirely: it is never re-prompted, only resubscribed.
+  if (input.record.execution_mode === "remote") return respawnRemote(input)
   if (input.sessionPath === undefined) return respawnFresh(input)
   if (input.record.execution_mode === "in-process") return respawnInProcess({ ...input, sessionPath: input.sessionPath })
   return respawnProcess({ ...input, sessionPath: input.sessionPath })
 }
 
+function respawnRemote(input: {
+  readonly record: TaskRecord
+  readonly runners: Readonly<Record<"in-process" | "process" | "remote", ManagedRunner>>
+}): Promise<RespawnResult> {
+  const remote = input.record.remote
+  if (remote === undefined) {
+    return Promise.resolve(failure("unrecoverable", "respawn_failed", "remote task has no reattach facts"))
+  }
+  const runner = input.runners.remote
+  if (!hasRemoteReattach(runner)) {
+    return Promise.resolve(failure("unrecoverable", "respawn_failed", "remote runner cannot reattach"))
+  }
+  try {
+    const handle = runner.reattach(
+      { name: remote.name, url: remote.url, taskId: remote.task_id, contextId: remote.context_id },
+      input.record.task_id,
+    )
+    return Promise.resolve({ ok: true, handle })
+  } catch (error) {
+    log("senpi-task remote reattach failed", { taskId: input.record.task_id, error: String(error) })
+    return Promise.resolve(failure("retryable", "respawn_failed", "remote reattach failed"))
+  }
+}
+
 async function respawnFresh(input: {
   readonly record: TaskRecord
   readonly stateDir: string
-  readonly runners: Readonly<Record<"in-process" | "process", ManagedRunner>>
+  readonly runners: Readonly<Record<"in-process" | "process" | "remote", ManagedRunner>>
   readonly rpcRunner: RpcRespawnRunner
   readonly trustedLaunch?: TrustedRespawnLaunchResolver
 }): Promise<RespawnResult> {
@@ -79,7 +112,7 @@ async function respawnInProcess(input: {
   readonly record: TaskRecord
   readonly sessionPath: string
   readonly stateDir: string
-  readonly runners: Readonly<Record<"in-process" | "process", ManagedRunner>>
+  readonly runners: Readonly<Record<"in-process" | "process" | "remote", ManagedRunner>>
 }): Promise<RespawnResult> {
   const rebuilt = buildRespawnManagedSpec(input.record, input.stateDir)
   if (!rebuilt.ok) return failure("unrecoverable", rebuilt.code, rebuilt.reason)
@@ -193,57 +226,4 @@ function failure(
   reason: string,
 ): RespawnResult {
   return { ok: false, disposition, code, reason }
-}
-
-export async function reattachManagedTask(input: {
-  readonly record: TaskRecord
-  readonly handle: ManagedChildHandle
-  readonly store: TaskRecordStore
-  readonly hostPid: number
-  readonly now: () => number
-  readonly isAttached: (taskId: string) => boolean
-  readonly attachLive: (record: TaskRecord, handle: ManagedChildHandle) => () => void
-  readonly detachLive: (taskId: string, handle: ManagedChildHandle, unsubscribe: () => void) => void
-  readonly destroyAttached: (taskId: string) => Promise<void>
-  readonly armOutcome: (record: TaskRecord, handle: ManagedChildHandle, epoch: number) => void
-}): Promise<ReattachResult> {
-  const fresh = input.store.load(input.record.task_id)
-  if (fresh?.host_pid !== input.hostPid || fresh.residency_state !== "resident") {
-    await discardManagedHandle(input.handle)
-    return { ok: false, kind: "failed", reason: "task ownership claim is not held by this host" }
-  }
-  if (input.isAttached(fresh.task_id)) {
-    await discardManagedHandle(input.handle)
-    return { ok: false, kind: "already_attached", reason: "task already has a live handle" }
-  }
-  let unsubscribe: (() => void) | undefined
-  let attached = false
-  try {
-    unsubscribe = input.attachLive(fresh, input.handle)
-    attached = true
-    if (isTerminalRecord(fresh)) {
-      if (input.handle.pid !== undefined) {
-        input.store.mutate(fresh.task_id, (current) => ({ ...current, pid: input.handle.pid }))
-      }
-      return { ok: true }
-    }
-    const { error_message: _error, final_response: _final, killed: _killed, ...rest } = fresh
-    const epoch = fresh.notification.run_epoch + 1
-    const reattached: TaskRecord = {
-      ...rest,
-      status: "running",
-      updated_at: nowIso(input.now),
-      notification: { ...fresh.notification, run_epoch: epoch },
-      ...(input.handle.pid === undefined ? {} : { pid: input.handle.pid }),
-    }
-    input.store.replace(reattached)
-    input.armOutcome(reattached, input.handle, epoch)
-    return { ok: true }
-  } catch (error) {
-    if (attached) await input.destroyAttached(fresh.task_id)
-    else await discardManagedHandle(input.handle)
-    if (unsubscribe !== undefined) input.detachLive(fresh.task_id, input.handle, unsubscribe)
-    log("senpi-task reattach failed", { taskId: fresh.task_id, error: String(error) })
-    return { ok: false, kind: "failed", reason: "manager reattach failed" }
-  }
 }

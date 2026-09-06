@@ -1,4 +1,4 @@
-export type ExecutionMode = "in-process" | "process"
+export type ExecutionMode = "in-process" | "process" | "remote"
 
 export type ExecutionModeSources = {
   readonly specMode?: ExecutionMode

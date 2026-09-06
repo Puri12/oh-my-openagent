@@ -359,7 +359,7 @@ describe("reconcileOnSessionStart scoped revival", () => {
     const inProcess = new FakeRunner()
     const manager = createTaskManager({
       store,
-      runners: { "in-process": inProcess, process: new FakeRunner() },
+      runners: { "in-process": inProcess, process: new FakeRunner(), remote: new FakeRunner() },
       planner: () => ({ kind: "resolved", plan: { model: "anthropic/claude" } }),
       config: settings(),
       cwd: "/tmp/project",

@@ -23,7 +23,12 @@ export function buildStartSpec(
   const loadSkills = deps.loadSkills ?? createFsSkillLoader()
   const skills = loadSkills(params.load_skills ?? [], cwd)
   const skillSummary = taskSkillSummary(params.load_skills ?? [], skills)
-  const executionMode = resolvedTaskExecutionMode(target, deps)
+  // A `remote` param routes the child to another omo host, which fixes its execution mode; the
+  // local agent/config chain only decides the mode when no remote was requested.
+  const remote = params.remote?.trim()
+  const executionMode = remote === undefined || remote.length === 0
+    ? resolvedTaskExecutionMode(target, deps)
+    : "remote"
   return {
     prompt: skills.prepend + params.prompt,
     ...(skillSummary === undefined ? {} : { skills: skillSummary }),
@@ -33,6 +38,7 @@ export function buildStartSpec(
     depth: (ancestry?.depth ?? 0) + 1,
     ...("category" in target ? { category: target.category } : { subagent_type: target.subagentType }),
     execution_mode: executionMode,
+    ...(remote === undefined || remote.length === 0 ? {} : { remote }),
     ...(params.model !== undefined && { model: params.model }),
     ...(params.name !== undefined && { name: params.name }),
     ...(params.description !== undefined && { description: params.description }),
@@ -77,6 +83,7 @@ export function singleSpawnParams(item: ResolvedSpawnItem, runInBackground: bool
     ...(item.description !== undefined && { description: item.description }),
     ...(item.name !== undefined && { name: item.name }),
     ...(item.model !== undefined && { model: item.model }),
+    ...(item.remote !== undefined && { remote: item.remote }),
     load_skills: [...item.load_skills],
     ...(runInBackground !== undefined && { run_in_background: runInBackground }),
   }

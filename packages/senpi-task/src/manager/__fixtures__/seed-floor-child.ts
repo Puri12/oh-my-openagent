@@ -34,7 +34,7 @@ function makeManager(project: string) {
   const process = new FakeRunner()
   const manager = createTaskManager({
     store,
-    runners: { "in-process": inProcess, process },
+    runners: { "in-process": inProcess, process, remote: process },
     planner: categoryPlanner(),
     config: settings({ default_concurrency: 5, max_depth: 1 }),
     cwd: project,
@@ -64,7 +64,7 @@ async function run(): Promise<void> {
         const process = new FakeRunner()
         const manager = createTaskManager({
           store,
-          runners: { "in-process": inProcess, process },
+          runners: { "in-process": inProcess, process, remote: process },
           planner: categoryPlanner(),
           config: settings({ default_concurrency: 5, max_depth: 1 }),
           cwd: project,

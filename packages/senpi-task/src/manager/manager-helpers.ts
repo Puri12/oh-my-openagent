@@ -88,6 +88,10 @@ export function buildManagedSpec(input: {
     ...(plan.resolved_model !== undefined ? { resolvedModel: plan.resolved_model } : {}),
     ...(plan.variant !== undefined ? { variant: plan.variant } : {}),
     ...(record.agent_type !== undefined ? { agentType: record.agent_type } : {}),
+    // Remote routing inputs: the requested host and the task's category, consumed only by the
+    // remote runner's selector (the other modes ignore both).
+    ...(spec.remote !== undefined ? { remote: spec.remote } : {}),
+    ...(record.category !== undefined ? { category: record.category } : {}),
     ...(instructions !== undefined ? { instructions } : {}),
     ...(plan.toolAllowlist !== undefined ? { toolAllowlist: plan.toolAllowlist } : {}),
     ...(record.tool_deny !== undefined ? { toolDenylist: record.tool_deny } : {}),

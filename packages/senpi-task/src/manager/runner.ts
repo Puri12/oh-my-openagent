@@ -3,6 +3,7 @@ import type { CreateAgentSessionOptions } from "@code-yeongyu/senpi"
 import type { ChildHandle as InProcessChildHandle } from "../runners/in-process/child-handle"
 import { RunnerError, type ChildSpec } from "../runners/in-process"
 import { resolveChildSessionDir } from "../runners/rpc/spawn"
+import type { RemoteFacts } from "../runners/remote/types"
 import type { RpcChildHandle, RpcRunnerSpec } from "../runners/types"
 import { adaptInProcessHandle, adaptRpcHandle, type ManagedChildHandle } from "./child-handle"
 import type { ManagedRunner, ManagedStartSpec } from "./types"
@@ -33,6 +34,20 @@ export type InProcessRunnerLike = {
 
 export type RpcRunnerLike = {
   start(spec: RpcRunnerSpec): Promise<RpcChildHandle>
+}
+
+// The RemoteRunner's surface as the manager consumes it: start returns an already-ManagedChildHandle
+// (the remote handle IS the managed shape), and reattach rebuilds one from persisted A2A facts.
+export type RemoteRunnerLike = {
+  start(spec: ManagedStartSpec): Promise<ManagedChildHandle>
+  reattach(facts: RemoteFacts, taskId: string): ManagedChildHandle
+}
+
+export function createRemoteManagedRunner(runner: RemoteRunnerLike): ManagedRunner & RemoteRunnerLike {
+  return {
+    start: (spec) => runner.start(spec),
+    reattach: (facts, taskId) => runner.reattach(facts, taskId),
+  }
 }
 
 export function createInProcessManagedRunner(

@@ -24,6 +24,31 @@ export { buildSubagentPrompt, type SubagentPromptInput } from "./in-process/suba
 export { createChildResourceLoader } from "./in-process/child-loader"
 export { RpcProcessRunner } from "./rpc-process"
 export type { RpcProcessRunnerOptions } from "./rpc-process"
+export {
+  A2aClient,
+  OMO_REMOTE_EXTENSION_URI,
+  RemoteA2aError,
+  RemoteRunner,
+  createRemoteChildHandle,
+  createSseDecoder,
+  selectRemote,
+} from "./remote"
+export type {
+  A2aCard,
+  A2aClientOptions,
+  A2aStreamEvent,
+  A2aTask,
+  RemoteCandidate,
+  RemoteChildHandle,
+  RemoteDef,
+  RemoteFacts,
+  RemoteRunnerOptions,
+  RemoteSelection,
+  RemoteSelectionError,
+  RemoteUsage,
+  SelectRemoteInput,
+  SendMessageParams,
+} from "./remote"
 export type {
   ChildEventListener,
   ChildExitFacts,
